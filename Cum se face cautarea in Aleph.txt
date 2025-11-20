@@ -1,0 +1,700 @@
+Daca cautam dupa cota  http://localhost/aleph_api.php?cota=III-32073  
+
+sau dupa  
+
+http://localhost/aleph_api.php?barcode=C196541  
+
+Nu gaseste corect titlul, in amandoua cazurile,desi titlul exista
+
+Deci, reluam. Cautarea pe Aleph se face aici:
+
+http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-01811?func=find-b-0 
+
+Putem cauta dupa titlu, dupa cota, dupa bar code, etc  
+
+Daca cautam dupa cota III-32073 gasim:
+
+http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-01874?func=find-b&request=III-32073&find_code=WLB&adjacent=N&local_base=RAI01&x=53&y=13&filter_code_1=WLN&filter_request_1=&filter_code_2=WYR&filter_request_2=&filter_code_3=WYR&filter_request_3=&filter_code_4=WFM&filter_request_4=&filter_code_5=WSL&filter_request_5= 
+
+Vedem ca exista la filiala 
+
+Biblioteca Academiei Iaşi( 1/ 0)
+Biblioteca Inst. Istorie( 1/ 0)
+
+<a href="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02152?func=item-global&amp;doc_library=RAI01&amp;doc_number=000102329&amp;year=&amp;volume=&amp;sub_library=ACAD">Biblioteca Academiei Iaşi(     1/     0)</a>
+
+nu ne intereseaza celelalte sau cealalta biblioteca.
+
+Si mai vedem ca exista autorul:
+
+<td class="td1" width="15%" valign="top">Zimmermann&nbsp;Silvia Irina&nbsp;ed., trad.  </td>
+
+De citit fara spatiul &nbsp;
+
+Acuma, ca sa vedem cota si barcode la aceasta carte, dam click pe Biblioteca Academiei Iaşi( 1/ 0) si ajungem pe Catalog general BARI Colecţii - exemplare
+
+http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02152?func=item-global&doc_library=RAI01&doc_number=000102329&year=&volume=&sub_library=ACAD 
+Iar aici avem tot ce ne intereseaza: Cota, Bar Cod si Statut carte
+
+  <td class=td1><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02790?func=item-global-exp&doc_number=000102329&item_sequence=000010&sub_library=ACAD >Mai multe informaţii</A><BR></td> 
+  <!--Descriere exempl.--> 
+  <td class=td1><br></td> 
+  <!--Statut împrumut--> 
+  <td class=td1>Pentru împrumut</td> 
+  <!--Data scadentă--> 
+  <td class=td1>Pe raft</td> 
+  <!--Ora scadentă--> 
+  <!-- <td class=td1><br></td>--> 
+  <!--Bib.filială--> 
+  <td class=td1 nowrap>Biblioteca Academiei Iaşi</td> 
+  <!--Colecţie--> 
+  <td class=td1 nowrap>Cărţi depozit</td> 
+  <!--Localizare--> 
+  <td class=td1>III-32073</td> 
+  <!--Pagini--> 
+<!--  <td class=td1><br></td>--> 
+  <!--Nici o cerere--> 
+ <!-- <td class=td1><br> </td>  --> 
+  <!--Location-2--> 
+  <td class=td1>2020/25</td> 
+  <!--Barcod--> 
+  <td class=td1>C196541</td> 
+  <!--Note-opac--> 
+<td class=td1><br></td> 
+  </tr> 
+------- 
+
+
+
+
+
+
+Exemplu al doilea de cautare:
+
+Am testat pagina http://localhost/cauta_cod.php sa vad daca gaseste in Aleph pe  http://83.146.133.42:8991/F/
+
+Caut: in pagina  http://83.146.133.42:8991/F/  "fascinatia numelui"
+
+</table> 
+<br> 
+<div class="title"> 
+  Căutare de bază 
+</div> 
+<form method=get 
+      name=form1 
+      action="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-01529"> 
+<input type="hidden" name="func" value="find-b"> 
+<table cellspacing=2 border=0 cellpadding="0" width="100%"> 
+ <tr> 
+  <td class="td2" width="20%" nowrap> 
+    Introduceţi termenul sau sintagma 
+  </td> 
+  <td class="td2"  id="small"> 
+    <input size=40 name="request" value='fascinatia numelui'> 
+  </td> 
+ </tr> 
+ <tr> 
+  <td class="td2" valign=top nowrap>Câmpul în care se caută 
+  </td> 
+  <td class="td2" id="small"> 
+  
+2. Apas butonul start:
+
+<input type="image" alt=" Go " src="http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/f-go.gif" border="0">
+
+3. Ajung la pagina asta:  http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02189?func=find-b&request=fascinatia+numelui&find_code=WRD&adjacent=N&local_base=RAI01&x=57&y=4&filter_code_1=WLN&filter_request_1=&filter_code_2=WYR&filter_request_2=&filter_code_3=WYR&filter_request_3=&filter_code_4=WFM&filter_request_4=&filter_code_5=WSL&filter_request_5=
+
+Aici gasesc astfel:
+
+<!-- filename: short-a-head --> 
+<table cellspacing=2 border=0 width="100%"> 
+ <tr class=tr1> 
+  <th class=text3>&#35;</th> 
+  <th class=text3><br></th> 
+  <th class=text3>Format</th> 
+  <th class=text3><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05993?func=short-sort&set_number=000774&sort_option=01---A02---A>Autor</a></th> 
+  <th class=text3><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05994?func=short-sort&set_number=000774&sort_option=02---A03---A>Titlu</a></th> 
+  <th class=text3>Vol.</th> 
+  <th class=text3><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05995?func=short-sort&set_number=000774&sort_option=03---D02---A>An</a></th> 
+  <th class=text3>Subiect</th> 
+  <th class=text3>Filială/Exemplare</th> 
+  <th class=text3>Imagine</th> 
+  <th class=text3>Media</th> 
+ </tr> 
+
+<!-- filename: short-a-body--> 
+ <iframe frameborder=0 width=0 height=0 id=XX000001 title="XX000001"></iframe> 
+ <tr valign=baseline> 
+  <td class=td1 id=centered width="1%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05996?func=full-set-set&set_number=000774&set_entry=000001&format=999>1</A></td> 
+  <td class=td1 id=centered width="1%" valign=top><form name=XXX000001 method=GET><input type=checkbox name=ckbox onClick="javascript:select_record(this.form);" onKeyPressed="javascript:select_record(this.form);"></form></td> 
+<!-- 
+  <td class=td1  width="15%" valign=top>BK4  </td> 
+--> 
+  <td class="td1"  width="5%" valign="middle" align="center"><img src="http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/BK4.png" alt=""> </td> 
+  <td class=td1  width="15%" valign=top>Uritescu&nbsp;Dorin N.  </td> 
+  <td class=td1  width="25%" valign=top> 
+<script type="text/javascript"> 
+        var recordLinkRaw = '<A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05997?func=full-set-set&set_number=000774&set_entry=000001&format=999>1</A>'; 
+        var recordLink = recordLinkRaw.substring(0, recordLinkRaw.indexOf('>')); 
+        document.write(recordLink); 
+        document.write('>'); 
+</script> 
+Fascinaţia numelui&nbsp;:&nbsp;Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume  </td> 
+  <td class=td1  width="10%" valign=top><BR>  </td> 
+  <td class=td1  width="5%" valign=top>2009  </td> 
+  <td class=td1  width="10%" nowrap valign=top>Lexicologie--Nume  </td> 
+  <td class=td1  width="10%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05998?func=item-global&doc_library=RAI01&doc_number=000060919&year=&volume=&sub_library=ACAD  >Biblioteca Academiei Iaşi(     1/     0)</A><br>  </td> 
+  <td class=td1  width="10%" valign=top>  </td> 
+  <td class=td1  width="10%" valign=top><br>  </td> 
+ </tr> 
+
+<!-- filename: short-a-tail --> 
+</table>
+
+<!-- filename: short-tail --> 
+<p> 
+<div align=right> 
+  <img src=http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/f-prev-page-dim.gif border=0 alt='No Previous Page'>&nbsp;<img src=http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/f-next-page-dim.gif border=0 alt='No Next Page'> 
+</div> 
+</form> 
+<p> 
+<div class="text3"> 
+Puteţi revizui căutarea: 
+</div> 
+<form method=GET action="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05999"> 
+<input type="hidden" name="func" value="find-c"> 
+<input size=50 name="ccl_term" value='WRD = ( fascinatia numelui )'> 
+<div class=text3 id=bold nowrap> 
+Alegeţi baza de date: 
+</div> 
+<!-- filename: base-list-include --> 
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+   <select name=local_base> 
+     <option value=RAI01 selected          selected>CATALOGUL GENERAL al Bibliotecilor Academiei Rom&#226;ne-Iaşi</option>   
+     <option value=CARTEC                 >Catalogul general - carte curentă</option> 
+     <option value=SBCACAD                  >Catalogul general - SBC</option>              
+     <option value=IDSRCACAD                    >Catalogul general - IDSRC</option> 
+     <option value=ISRSACAD                   >Catalogul general - ISRS</option>  
+     <option value=PERIOD                 >Catalogul general - periodice</option> 
+     <option value=SPEC               >Catalogul general - colecţii speciale</option> 
+     <option value=ARTIC                >Catalogul general - articole din periodice</option> 
+     <option value=ELECTR                 >Catalogul general - resurse electronice</option> 
+     <option value=ACAD               >Catalogul Bibliotecii Filialei Iaşi a Academiei Rom&#226;ne</option> 
+     <option value=FIL              >Catalogul Bibliotecii Institutului de Filologie</option> 
+     <option value=IST              >Catalogul Bibliotecii Institutului de Istorie</option> 
+     <option value=SOC              >Catalogul Bibliotecii Institutului de Cercetări Economice şi Sociale</option> 
+     <option value=ARH              >Catalogul Bibliotecii Institutului de Arheologie</option> 
+ 
+<!--     <option value=CUT01              >Catalogul serialelor RAIT</option> 
+
+<!-- filename: short-a-body--> 
+ <iframe frameborder=0 width=0 height=0 id=XX000001 title="XX000001"></iframe> 
+ <tr valign=baseline> 
+  <td class=td1 id=centered width="1%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-03753?func=full-set-set&set_number=000772&set_entry=000001&format=999>1</A></td> 
+  <td class=td1 id=centered width="1%" valign=top><form name=XXX000001 method=GET><input type=checkbox name=ckbox onClick="javascript:select_record(this.form);" onKeyPressed="javascript:select_record(this.form);"></form></td> 
+<!-- 
+  <td class=td1  width="15%" valign=top>BK4  </td> 
+--> 
+  <td class="td1"  width="5%" valign="middle" align="center"><img src="http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/BK4.png" alt=""> </td> 
+  <td class=td1  width="15%" valign=top>Uritescu&nbsp;Dorin N.  </td> 
+  <td class=td1  width="25%" valign=top> 
+<script type="text/javascript"> 
+        var recordLinkRaw = '<A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-03754?func=full-set-set&set_number=000772&set_entry=000001&format=999>1</A>'; 
+        var recordLink = recordLinkRaw.substring(0, recordLinkRaw.indexOf('>')); 
+        document.write(recordLink); 
+        document.write('>'); 
+</script> 
+Fascinaţia numelui&nbsp;:&nbsp;Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume  </td> 
+  <td class=td1  width="10%" valign=top><BR>  </td> 
+  <td class=td1  width="5%" valign=top>2009  </td> 
+  <td class=td1  width="10%" nowrap valign=top>Lexicologie--Nume  </td> 
+  <td class=td1  width="10%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-03755?func=item-global&doc_library=RAI01&doc_number=000060919&year=&volume=&sub_library=ACAD  >Biblioteca Academiei Iaşi(     1/     0)</A><br>  </td> 
+  <td class=td1  width="10%" valign=top>  </td> 
+  <td class=td1  width="10%" valign=top><br>  </td> 
+ </tr> 
+
+<!-- filename: short-a-tail --> 
+</table> 
+
+Deci vedem ca se gaseste in biblioteca noastra "Biblioteca Academiei Iaşi", celelalte nu ne intereseaza, caci aici avem noi sediul.
+
+facem click pe:
+
+<a href="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02664?func=item-global&amp;doc_library=RAI01&amp;doc_number=000060919&amp;year=&amp;volume=&amp;sub_library=ACAD">Biblioteca Academiei Iaşi(     1/     0)</a>
+
+Asta ne duce la pagina asta:
+
+http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02664?func=item-global&doc_library=RAI01&doc_number=000060919&year=&volume=&sub_library=ACAD
+
+Iar aici avem asa:
+
+<!-- filename: full-xxx-body --> 
+<!--<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />--> 
+ <tr> 
+  <td class=td1> 
+    Author Uritescu, Dorin N.. Fascinaţia numelui : Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume propriu-nume comun şi nume comun-nume propriu- / Dorin N. Uritescu<br>    
+     
+   
+     
+  </td> 
+ </tr> 
+
+<!-- filename item-global-tail-1 --> 
+
+<!--filename: item-global-body--> 
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+  <tr> 
+  <td class=td1><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-10378?func=item-global-exp&doc_number=000060919&item_sequence=000010&sub_library=ACAD >Mai multe informaţii</A><BR></td> 
+  <!--Descriere exempl.--> 
+  <td class=td1><br></td> 
+  <!--Statut împrumut--> 
+  <td class=td1>Pentru împrumut</td> 
+  <!--Data scadentă--> 
+  <td class=td1>Pe raft</td> 
+  <!--Ora scadentă--> 
+  <!-- <td class=td1><br></td>--> 
+  <!--Bib.filială--> 
+  <td class=td1 nowrap>Biblioteca Academiei Iaşi</td> 
+  <!--Colecţie--> 
+  <td class=td1 nowrap>Cărţi depozit</td> 
+  <!--Localizare--> 
+  <td class=td1>III-28826</td> 
+  <!--Pagini--> 
+<!--  <td class=td1><br></td>--> 
+  <!--Nici o cerere--> 
+ <!-- <td class=td1><br> </td>  --> 
+  <!--Location-2--> 
+  <td class=td1>2012/52</td> 
+  <!--Barcod--> 
+  <td class=td1>60919-10</td> 
+  <!--Note-opac--> 
+<td class=td1><br></td> 
+  </tr> 
+super, acuma o alta mica problema. Nu gaseste corect titlul:
+
+Am testat pagina http://localhost/cauta_cod.php sa vad daca gaseste in Aleph pe  http://83.146.133.42:8991/F/
+
+Caut: in pagina  http://83.146.133.42:8991/F/  "fascinatia numelui"
+
+</table> 
+<br> 
+<div class="title"> 
+  Căutare de bază 
+</div> 
+<form method=get 
+      name=form1 
+      action="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-01529"> 
+<input type="hidden" name="func" value="find-b"> 
+<table cellspacing=2 border=0 cellpadding="0" width="100%"> 
+ <tr> 
+  <td class="td2" width="20%" nowrap> 
+    Introduceţi termenul sau sintagma 
+  </td> 
+  <td class="td2"  id="small"> 
+    <input size=40 name="request" value='fascinatia numelui'> 
+  </td> 
+ </tr> 
+ <tr> 
+  <td class="td2" valign=top nowrap>Câmpul în care se caută 
+  </td> 
+  <td class="td2" id="small"> 
+  
+2. Apas butonul start:
+
+<input type="image" alt=" Go " src="http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/f-go.gif" border="0">
+
+3. Ajung la pagina asta:  http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02189?func=find-b&request=fascinatia+numelui&find_code=WRD&adjacent=N&local_base=RAI01&x=57&y=4&filter_code_1=WLN&filter_request_1=&filter_code_2=WYR&filter_request_2=&filter_code_3=WYR&filter_request_3=&filter_code_4=WFM&filter_request_4=&filter_code_5=WSL&filter_request_5=
+
+Aici gasesc astfel:
+
+<!-- filename: short-a-head --> 
+<table cellspacing=2 border=0 width="100%"> 
+ <tr class=tr1> 
+  <th class=text3>&#35;</th> 
+  <th class=text3><br></th> 
+  <th class=text3>Format</th> 
+  <th class=text3><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05993?func=short-sort&set_number=000774&sort_option=01---A02---A>Autor</a></th> 
+  <th class=text3><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05994?func=short-sort&set_number=000774&sort_option=02---A03---A>Titlu</a></th> 
+  <th class=text3>Vol.</th> 
+  <th class=text3><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05995?func=short-sort&set_number=000774&sort_option=03---D02---A>An</a></th> 
+  <th class=text3>Subiect</th> 
+  <th class=text3>Filială/Exemplare</th> 
+  <th class=text3>Imagine</th> 
+  <th class=text3>Media</th> 
+ </tr> 
+
+<!-- filename: short-a-body--> 
+ <iframe frameborder=0 width=0 height=0 id=XX000001 title="XX000001"></iframe> 
+ <tr valign=baseline> 
+  <td class=td1 id=centered width="1%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05996?func=full-set-set&set_number=000774&set_entry=000001&format=999>1</A></td> 
+  <td class=td1 id=centered width="1%" valign=top><form name=XXX000001 method=GET><input type=checkbox name=ckbox onClick="javascript:select_record(this.form);" onKeyPressed="javascript:select_record(this.form);"></form></td> 
+<!-- 
+  <td class=td1  width="15%" valign=top>BK4  </td> 
+--> 
+  <td class="td1"  width="5%" valign="middle" align="center"><img src="http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/BK4.png" alt=""> </td> 
+  <td class=td1  width="15%" valign=top>Uritescu&nbsp;Dorin N.  </td> 
+  <td class=td1  width="25%" valign=top> 
+<script type="text/javascript"> 
+        var recordLinkRaw = '<A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05997?func=full-set-set&set_number=000774&set_entry=000001&format=999>1</A>'; 
+        var recordLink = recordLinkRaw.substring(0, recordLinkRaw.indexOf('>')); 
+        document.write(recordLink); 
+        document.write('>'); 
+</script> 
+Fascinaţia numelui&nbsp;:&nbsp;Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume  </td> 
+  <td class=td1  width="10%" valign=top><BR>  </td> 
+  <td class=td1  width="5%" valign=top>2009  </td> 
+  <td class=td1  width="10%" nowrap valign=top>Lexicologie--Nume  </td> 
+  <td class=td1  width="10%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05998?func=item-global&doc_library=RAI01&doc_number=000060919&year=&volume=&sub_library=ACAD  >Biblioteca Academiei Iaşi(     1/     0)</A><br>  </td> 
+  <td class=td1  width="10%" valign=top>  </td> 
+  <td class=td1  width="10%" valign=top><br>  </td> 
+ </tr> 
+
+<!-- filename: short-a-tail --> 
+</table>
+
+<!-- filename: short-tail --> 
+<p> 
+<div align=right> 
+  <img src=http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/f-prev-page-dim.gif border=0 alt='No Previous Page'>&nbsp;<img src=http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/f-next-page-dim.gif border=0 alt='No Next Page'> 
+</div> 
+</form> 
+<p> 
+<div class="text3"> 
+Puteţi revizui căutarea: 
+</div> 
+<form method=GET action="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-05999"> 
+<input type="hidden" name="func" value="find-c"> 
+<input size=50 name="ccl_term" value='WRD = ( fascinatia numelui )'> 
+<div class=text3 id=bold nowrap> 
+Alegeţi baza de date: 
+</div> 
+<!-- filename: base-list-include --> 
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+   <select name=local_base> 
+     <option value=RAI01 selected          selected>CATALOGUL GENERAL al Bibliotecilor Academiei Rom&#226;ne-Iaşi</option>   
+     <option value=CARTEC                 >Catalogul general - carte curentă</option> 
+     <option value=SBCACAD                  >Catalogul general - SBC</option>              
+     <option value=IDSRCACAD                    >Catalogul general - IDSRC</option> 
+     <option value=ISRSACAD                   >Catalogul general - ISRS</option>  
+     <option value=PERIOD                 >Catalogul general - periodice</option> 
+     <option value=SPEC               >Catalogul general - colecţii speciale</option> 
+     <option value=ARTIC                >Catalogul general - articole din periodice</option> 
+     <option value=ELECTR                 >Catalogul general - resurse electronice</option> 
+     <option value=ACAD               >Catalogul Bibliotecii Filialei Iaşi a Academiei Rom&#226;ne</option> 
+     <option value=FIL              >Catalogul Bibliotecii Institutului de Filologie</option> 
+     <option value=IST              >Catalogul Bibliotecii Institutului de Istorie</option> 
+     <option value=SOC              >Catalogul Bibliotecii Institutului de Cercetări Economice şi Sociale</option> 
+     <option value=ARH              >Catalogul Bibliotecii Institutului de Arheologie</option> 
+ 
+<!--     <option value=CUT01              >Catalogul serialelor RAIT</option> 
+
+<!-- filename: short-a-body--> 
+ <iframe frameborder=0 width=0 height=0 id=XX000001 title="XX000001"></iframe> 
+ <tr valign=baseline> 
+  <td class=td1 id=centered width="1%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-03753?func=full-set-set&set_number=000772&set_entry=000001&format=999>1</A></td> 
+  <td class=td1 id=centered width="1%" valign=top><form name=XXX000001 method=GET><input type=checkbox name=ckbox onClick="javascript:select_record(this.form);" onKeyPressed="javascript:select_record(this.form);"></form></td> 
+<!-- 
+  <td class=td1  width="15%" valign=top>BK4  </td> 
+--> 
+  <td class="td1"  width="5%" valign="middle" align="center"><img src="http://83.146.133.42:8991/exlibris/aleph/u20_2/alephe/www_f_rum/icon/BK4.png" alt=""> </td> 
+  <td class=td1  width="15%" valign=top>Uritescu&nbsp;Dorin N.  </td> 
+  <td class=td1  width="25%" valign=top> 
+<script type="text/javascript"> 
+        var recordLinkRaw = '<A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-03754?func=full-set-set&set_number=000772&set_entry=000001&format=999>1</A>'; 
+        var recordLink = recordLinkRaw.substring(0, recordLinkRaw.indexOf('>')); 
+        document.write(recordLink); 
+        document.write('>'); 
+</script> 
+Fascinaţia numelui&nbsp;:&nbsp;Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume  </td> 
+  <td class=td1  width="10%" valign=top><BR>  </td> 
+  <td class=td1  width="5%" valign=top>2009  </td> 
+  <td class=td1  width="10%" nowrap valign=top>Lexicologie--Nume  </td> 
+  <td class=td1  width="10%" valign=top><A HREF=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-03755?func=item-global&doc_library=RAI01&doc_number=000060919&year=&volume=&sub_library=ACAD  >Biblioteca Academiei Iaşi(     1/     0)</A><br>  </td> 
+  <td class=td1  width="10%" valign=top>  </td> 
+  <td class=td1  width="10%" valign=top><br>  </td> 
+ </tr> 
+
+<!-- filename: short-a-tail --> 
+</table> 
+
+Deci vedem ca se gaseste in biblioteca noastra "Biblioteca Academiei Iaşi", celelalte nu ne intereseaza, caci aici avem noi sediul.
+
+facem click pe:
+
+<a href="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02664?func=item-global&amp;doc_library=RAI01&amp;doc_number=000060919&amp;year=&amp;volume=&amp;sub_library=ACAD">Biblioteca Academiei Iaşi(     1/     0)</a>
+
+Asta ne duce la pagina asta:
+
+http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-02664?func=item-global&doc_library=RAI01&doc_number=000060919&year=&volume=&sub_library=ACAD
+
+Iar aici avem asa:
+
+<!-- filename: full-xxx-body --> 
+<!--<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />--> 
+ <tr> 
+  <td class=td1> 
+    Author Uritescu, Dorin N.. Fascinaţia numelui : Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume propriu-nume comun şi nume comun-nume propriu- / Dorin N. Uritescu<br>    
+     
+   
+     
+  </td> 
+ </tr> 
+
+<!-- filename item-global-tail-1 --> 
+
+<!--filename: item-global-body--> 
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+  <tr> 
+  <td class=td1><a href=http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-10378?func=item-global-exp&doc_number=000060919&item_sequence=000010&sub_library=ACAD >Mai multe informaţii</A><BR></td> 
+  <!--Descriere exempl.--> 
+  <td class=td1><br></td> 
+  <!--Statut împrumut--> 
+  <td class=td1>Pentru împrumut</td> 
+  <!--Data scadentă--> 
+  <td class=td1>Pe raft</td> 
+  <!--Ora scadentă--> 
+  <!-- <td class=td1><br></td>--> 
+  <!--Bib.filială--> 
+  <td class=td1 nowrap>Biblioteca Academiei Iaşi</td> 
+  <!--Colecţie--> 
+  <td class=td1 nowrap>Cărţi depozit</td> 
+  <!--Localizare--> 
+  <td class=td1>III-28826</td> 
+  <!--Pagini--> 
+<!--  <td class=td1><br></td>--> 
+  <!--Nici o cerere--> 
+ <!-- <td class=td1><br> </td>  --> 
+  <!--Location-2--> 
+  <td class=td1>2012/52</td> 
+  <!--Barcod--> 
+  <td class=td1>60919-10</td> 
+  <!--Note-opac--> 
+<td class=td1><br></td> 
+  </tr> 
+
+Mie imi apare la titlul cartii "Permis de bibliotecă" dar acesta nu este titlul cartii, ci este un alt buton din link-ul:
+
+http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-00578?func=find-b&request=fascinatia+numelui&find_code=WRD&adjacent=N&local_base=RAI01&x=43&y=11&filter_code_1=WLN&filter_request_1=&filter_code_2=WYR&filter_request_2=&filter_code_3=WYR&filter_request_3=&filter_code_4=WFM&filter_request_4=&filter_code_5=WSL&filter_request_5= 
+
+
+Uite asa arata butonul: <a href="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-00624?func=BOR-INFO" title="Vizualizarea informaţiei din fişa personală" class="blue"> 
+      Permis de bibliotecă</a>
+
+Dar trebuia sa preiei din acest camp titlul: 
+
+<a href="http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-01105?func=full-set-set&amp;set_number=000781&amp;set_entry=000001&amp;format=999"> 
+Fascinaţia numelui&nbsp;:&nbsp;Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume  </a>
+
+sau din celalalt link de aici:
+
+<!-- filename: full-xxx-body --> 
+<!--<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />--> 
+ <tr> 
+  <td class=td1> 
+    Author Uritescu, Dorin N.. Fascinaţia numelui : Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume propriu-nume comun şi nume comun-nume propriu- / Dorin N. Uritescu<br> 
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </td> 
+ </tr> 
+ 
+La unele carti, daca caut cota, imi apare la titlul cartii "Permis de biblioteca", desi altul este titlul cartii.  Deci,  unele titlluri le gaseste corect, altele nu. Verifica debug, Din ce cauza?
+
+WLB = II-3682 (asa se cauta cota)
+
+@d:\Catalog general BARI Colecţii - exemplare.html 
+Am gasit de ce face eroarea asta. Din cauza faptului ca exista carti diferite cu aceeasi cota, asta e problema. Dar bar codul este unic. Deci daca exista doar o singura carte cu cota unica, atunci gaseste titlul corect. Daca gaseste mai multe carti, cu aceeasi cota, atunci nu gaseste corect titlul, dar gaseste corect cota si mai ales code barul unic.
+
+Deci, trebuie regandit astfel. Indiferent ce caut, primordial este bar codul. Caci acesta este unic si nu sunt niciodata 2 carti la fel. La cota, pot fi carti diferite cu aceeasi cota. Aici nu stiu cum sa fac. Ma gandeam ca daca caut cota, sa incerce sa gaseasca si barcodul, sa le compare, si sa dea titlul care se repeta sau macar cel din barcode.
+
+Dar nu ai de unde sa stii la cota, care din numeroasele carti, este cota cea buna.
+
+Deci, cred ca lasam asa, in principal se va cauta dupa bar cod.
+
+Acuma cum sa facem daca vreau sa caut dupa cota, in asa fel incat sa gaseasca corect cartea.
+
+
+ping 83.146.133.42 -t
+
+Iată comenzile pentru verificarea conexiunii către acea adresă din CMD/PowerShell:
+
+## 1️⃣ Test rapid - Verificare ping (CMD)
+```cmd
+ping 83.146.133.42 -t
+```
+**Ce face:** Trimite ping-uri continue către server. Apasă `Ctrl+C` pentru a opri.
+
+---
+
+## 2️⃣ Test complet - Verificare HTTP (PowerShell) ⭐ RECOMANDAT
+```powershell
+$url = "http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-00883?func=find-b-0"
+
+while ($true) {
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    try {
+        $response = Invoke-WebRequest -Uri $url -TimeoutSec 10 -UseBasicParsing
+        Write-Host "[$timestamp] ✅ OK - Status: $($response.StatusCode) - Lungime: $($response.Content.Length) bytes" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "[$timestamp] ❌ EROARE: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    Start-Sleep -Seconds 5
+}
+```
+**Ce face:** Verifică URL-ul la fiecare 5 secunde și afișează statusul. Apasă `Ctrl+C` pentru a opri.
+
+---
+
+## 3️⃣ Test simplu - O singură verificare (PowerShell)
+```powershell
+Invoke-WebRequest -Uri "http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-00883?func=find-b-0" -UseBasicParsing
+```
+
+---
+
+## 4️⃣ Verificare cu CURL (dacă ai curl instalat)
+```cmd
+curl -I "http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-00883?func=find-b-0"
+```
+
+---
+
+## 5️⃣ Monitorizare continuă cu statistici (PowerShell)
+```powershell
+$url = "http://83.146.133.42:8991/F/FVE78R4RRKY6H36QDU961SIFLPVM5VSIP7QM6Y1F2GSCUVDGXB-00883?func=find-b-0"
+$succes = 0
+$esecuri = 0
+$total = 0
+
+Write-Host "🔍 Monitorizare conexiune la Aleph..." -ForegroundColor Cyan
+Write-Host "Apasă Ctrl+C pentru a opri`n" -ForegroundColor Yellow
+
+while ($true) {
+    $total++
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    
+    try {
+        $start = Get-Date
+        $response = Invoke-WebRequest -Uri $url -TimeoutSec 10 -UseBasicParsing
+        $duration = ((Get-Date) - $start).TotalMilliseconds
+        
+        $succes++
+        $procent = [math]::Round(($succes / $total) * 100, 2)
+        
+        Write-Host "[$timestamp] ✅ OK - ${duration}ms - Succes: $succes/$total ($procent%)" -ForegroundColor Green
+    }
+    catch {
+        $esecuri++
+        $procent = [math]::Round(($succes / $total) * 100, 2)
+        
+        Write-Host "[$timestamp] ❌ EROARE - Eșecuri: $esecuri/$total - Succes: $procent%" -ForegroundColor Red
+        Write-Host "   Detalii: $($_.Exception.Message)" -ForegroundColor DarkRed
+    }
+    
+    Start-Sleep -Seconds 3
+}
+```
+**Ce face:** Monitorizare avansată cu statistici de succes/eșec.
+
+---
+
+## 6️⃣ Test traceroute - Vezi calea către server (CMD)
+```cmd
+tracert 83.146.133.42
+```
+**Ce face:** Arată toate hop-urile (nodurile) până la server.
+
+---
+
+## 🎯 Recomandarea mea:
+
+Folosește **#2 (Test complet)** sau **#5 (Monitorizare cu statistici)** în PowerShell pentru cea mai bună verificare.
+
+**Cum deschizi PowerShell:**
+1. Apasă `Win + X`
+2. Alege "Windows PowerShell" sau "Terminal"
+3. Copiază comanda dorită și apasă Enter
+
+**Ce să urmărești:**
+- ✅ **Status 200** = OK, serverul răspunde
+- ❌ **Timeout** = Serverul nu răspunde în 10 secunde
+- ❌ **Connection refused** = Portul 8991 e închis sau blocat
+- ❌ **Network unreachable** = Probleme de conexiune
+
+Vrei să-ți explic cum să salvezi rezultatele într-un fișier log?
+
+TEST:
+
+COTA:
+II-3682
+
+Barcod:
+C003091
+
+Titlul este extras din pagina de rezultate (`search_response`), nu din pagina de detalii (`item-global`). Corectăm: extragem titlul doar din `item_html` (pagina `item-global`), nu din `search_response`.
+
+
+[3 tools called]
+
+
+Titlul este extras din pagina de rezultate (`search_response`), nu din pagina de detalii (`item-global`). Eliminăm extragerea din `search_response` și extragem titlul doar din `item_html` (pagina `item-global`).
+
+
+[2 tools called]
+
+
+Îmbunătățind logica de extragere a titlului din `item_html` (pagina `item-global`):
+
+
+[5 tools called]
+
+
+Am corectat problema. Modificările:
+
+## Ce am corectat:
+
+1. Eliminat extragerea titlului din `search_response` — pagina de rezultate conține text generic ("Înregistrările selectate", etc.), nu titlul real.
+
+2. Titlul se extrage doar din `item_html` (pagina `item-global`) — aceasta conține detaliile reale ale cărții.
+
+3. Adăugat filtre pentru text generic:
+   - Excludere link-uri de navigare înainte de parsing
+   - Excludere header-ul (middlebar)
+   - Excludere explicită a textului "Înregistrările selectate"
+   - Verificări mai stricte pentru a exclude textul generic
+
+4. Îmbunătățit pattern-urile de extragere din `item-global` — pattern-urile caută corect titlul în pagina de detalii.
+
+## Testează acum:
+
+1. Barcode: `http://localhost/aleph_api.php?barcode=C003091`
+2. Cotă: `http://localhost/aleph_api.php?cota=II-3682`
+
+Titlul ar trebui să fie extras corect din pagina `item-global`, nu din pagina de rezultate. Spune-mi dacă funcționează.
+
+http://localhost/aleph_api.php?cota=II-3682
+
+http://localhost/aleph_api.php?barcode=C003091
+
+Bine că funcționează.
+
+## Rezumatul soluției:
+
+1. Problema principală: titlul era extras din pagina de rezultate (`search_response`), care conține text generic de navigare ("Înregistrările selectate", "Permis de bibliotecă", etc.), nu titlul real al cărții.
+
+2. Soluția: eliminarea extragării titlului din `search_response` și extragerea doar din `item_html` (pagina `item-global`), care conține detaliile reale.
+
+3. Filtre adăugate: excludere explicită a textelor generice de navigare înainte de parsing.
+
+Acum funcționează corect atât pentru:
+- Căutare după barcode (ex: `C003091`)
+- Căutare după cotă (ex: `II-3682`)
+
+Titlul este extras corect din pagina de detalii Aleph, nu din pagina de rezultate. Dacă mai apare ceva, spune-mi.

@@ -1,0 +1,52 @@
+# Instrucțiuni pentru verificare manuală server Linux
+
+## Opțiunea 1: Folosește Git Bash (dacă ai Git instalat)
+
+1. Deschide Git Bash
+2. Navighează la folderul proiectului
+3. Rulează: bash check_server.sh
+
+## Opțiunea 2: Conectare manuală SSH
+
+Conectează-te manual la server și rulează comenzile:
+
+```bash
+ssh -o StrictHostKeyChecking=no \
+    -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 \
+    -o HostKeyAlgorithms=+ssh-rsa \
+    -o MACs=+hmac-sha1 \
+    root@83.146.133.42
+```
+
+Parolă: YOUR-PASSWORD
+
+Apoi rulează comenzile:
+
+```bash
+# 1. Verificare spațiu liber
+df -h
+
+# 2. Verificare versiune MySQL
+mysql --version
+
+# 3. Listează bazele de date
+mysql -u root -e "SHOW DATABASES;"
+
+# 4. Verificare dimensiuni baze de date
+mysql -u root -e "SELECT table_schema AS 'Database', ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)' FROM information_schema.tables GROUP BY table_schema ORDER BY table_schema;"
+
+# 5. Verificare locație MySQL
+mysql -u root -e "SHOW VARIABLES LIKE 'datadir';"
+```
+
+## Opțiunea 3: Folosește PuTTY (Windows)
+
+1. Deschide PuTTY
+2. Host: 83.146.133.42
+3. Port: 22
+4. Connection type: SSH
+5. Click "Open"
+6. Login as: root
+7. Password: YOUR-PASSWORD
+8. Rulează comenzile de mai sus
+

@@ -1,0 +1,135 @@
+Iată ghidul complet pentru a crea **executabile .exe** din cele 2 scripturi Python:
+
+---
+
+## **Metoda 1: PyInstaller (Command Line) - RECOMANDAT**
+
+### **Pasul 1: Instalează PyInstaller**
+
+Deschide **Command Prompt** în folderul cu scripturile și rulează:
+
+```bash
+pip install pyinstaller
+```
+---
+
+### **Pasul 2: Creează EXE pentru Scanner CARTI**  BUN DIN CMD - MAI INTAI ASTA
+
+```bash
+pyinstaller --onefile --noconsole --name "BarcodeScanner" "barcode_scanner_dual FINAL.py"
+```
+
+**Explicație parametri:**
+- `--onefile` → Un singur fișier .exe (nu folder cu DLL-uri)
+- `--noconsole` → Fără fereastră CMD neagră (pentru GUI)
+- `--name "BarcodeScanner"` → Numele exe-ului va fi `BarcodeScanner.exe`
+
+---
+
+### **Pasul 3: Creează EXE pentru Generator**  BUN DIN CMD  APOI ASTA
+
+```bash
+pyinstaller --onefile --noconsole --name "BarcodeGenerator" "Generator de coduri de bare Carti+Utilizatori FINAL.py"
+```
+
+---
+
+### **Pasul 4: Găsește EXE-urile**
+
+După build, exe-urile vor fi în:
+```
+dist/BarcodeScanner.exe
+dist/BarcodeGenerator.exe
+```
+
+---
+
+## **Metoda 2: Auto-Py-To-Exe (GUI Friendly)**
+
+Dacă preferi interfață grafică:
+
+### **Instalare:**
+```bash
+pip install auto-py-to-exe
+```
+
+### **Lansare:**
+```bash
+auto-py-to-exe
+```
+
+**Setări în GUI:**
+1. **Script Location:** Selectează `barcode_scanner_dual FINAL.py`
+2. **One File:** ✅ DA
+3. **Console Window:** ❌ Window Based (Hide the console)
+4. **Icon:** (Opțional - poți adăuga o icoană .ico)
+5. Click **CONVERT .PY TO .EXE**
+
+Repetă pentru al 2-lea fișier.
+
+---
+
+## **⚠️ IMPORTANT: Dependențe EasyOCR și OpenCV**
+
+**Problema:** PyInstaller poate să nu includă automat toate modelele EasyOCR.
+
+**Soluție:** Dacă EXE-ul dă erori la rulare, folosește:
+
+```bash
+pyinstaller --onefile --noconsole --hidden-import easyocr --hidden-import cv2 --collect-all easyocr --name "BarcodeScanner" "barcode_scanner_dual FINAL.py"
+```
+
+---
+
+## **Testare EXE:**
+
+După build:
+1. Copiază `BarcodeScanner.exe` pe Desktop
+2. **ASIGURĂ-TE că XAMPP rulează** (PHP trebuie activ)
+3. Dublu-click pe exe → Ar trebui să pornească GUI-ul
+
+---
+
+## **Dacă EXE-ul e prea MARE (>100 MB):**
+
+E normal! EasyOCR + OpenCV + modele = ~200-300 MB.
+
+**Alternativă:** Poți folosi `--onedir` în loc de `--onefile`:
+```bash
+pyinstaller --noconsole --name "BarcodeScanner" "barcode_scanner_dual FINAL.py"
+```
+Rezultat: Folder `dist/BarcodeScanner/` cu exe + DLL-uri (mai rapid la startup).
+
+---
+
+## **Script Build Automat (build.bat)**
+
+Creează un fișier `build.bat` în folder cu scripturile:
+
+```batch
+@echo off
+echo ===================================
+echo    BUILD EXE - Biblioteca
+echo ===================================
+
+echo.
+echo [1/2] Building BarcodeScanner.exe...
+pyinstaller --onefile --noconsole --name "BarcodeScanner" "barcode_scanner_dual FINAL.py"
+
+echo.
+echo [2/2] Building BarcodeGenerator.exe...
+pyinstaller --onefile --noconsole --name "BarcodeGenerator" "Generator de coduri de bare Carti+Utilizatori FINAL.py"
+
+echo.
+echo ===================================
+echo    BUILD COMPLETE!
+echo    Check: dist\ folder
+echo ===================================
+pause
+```
+
+Dublu-click pe `build.bat` → creează ambele exe-uri automat! 🎯
+
+---
+
+**Ai nevoie de ajutor cu errori la build?** Spune-mi ce mesaj primești!

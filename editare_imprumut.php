@@ -65,6 +65,9 @@ $stmt = $pdo->prepare("
         i.*,
         c.titlu as carte_titlu,
         c.autor as carte_autor,
+        c.cod_bare as carte_cod_bare,
+        c.cota as carte_cota,
+        c.data_adaugare as carte_data_adaugare,
         cit.nume as cititor_nume,
         cit.prenume as cititor_prenume
     FROM imprumuturi i
@@ -74,6 +77,54 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$id]);
 $imprumut = $stmt->fetch();
+
+// Verifică dacă codul de bare și cota par să vină din Aleph
+// Logica: dacă codul de bare începe cu "000" sau are format Aleph (ex: 000030207-10)
+// sau dacă cota are format Aleph (ex: DAB II-3878, II-3878), atunci probabil vine din Aleph
+$cod_bare_din_aleph = false;
+$cota_din_aleph = false;
+
+if (!empty($imprumut['carte_cod_bare'])) {
+    // Coduri Aleph de obicei încep cu "000" sau au format specific (ex: 000030207-10, 000029152-10)
+    // Coduri manuale de obicei încep cu "BOOK" sau sunt mai scurte
+    $cod_bare = $imprumut['carte_cod_bare'];
+    if (preg_match('/^000\d+-?\d*$/', $cod_bare) || // Format: 000030207-10
+        preg_match('/^\d{9,}-\d+$/', $cod_bare) || // Format: 9+ cifre - cifre
+        (preg_match('/^\d{6,}/', $cod_bare) && strlen($cod_bare) >= 10)) { // 6+ cifre și lungime >= 10
+        $cod_bare_din_aleph = true;
+    }
+    // Coduri care încep cu "BOOK" sau "C" sunt probabil manuale
+    if (preg_match('/^(BOOK|C)\d+/i', $cod_bare)) {
+        $cod_bare_din_aleph = false;
+    }
+}
+
+if (!empty($imprumut['carte_cota'])) {
+    // Cote Aleph de obicei au format specific:
+    // - Format: DAB II-3878, II-3878, II-48419
+    // Cote manuale au format:
+    // - Format: 821.135.1 PET u (cu puncte și litere la sfârșit - 2-3 litere)
+    $cota = $imprumut['carte_cota'];
+    
+    // Verifică dacă se termină cu 2-3 litere (ex: "PET u", "CRE a", "ELI m") → MANUALĂ, editabilă
+    if (preg_match('/\s+[A-Z]{2,3}\s*[a-z]?\s*$/i', $cota)) {
+        // Se termină cu spațiu + 2-3 litere → e manuală, NU e din Aleph
+        $cota_din_aleph = false;
+    } elseif (preg_match('/^[A-Z]{2,}\s+[A-Z]+\s*-\s*\d+/', $cota) || // Format: DAB II-3878
+              preg_match('/^[A-Z]{2,}\s*-\s*\d+/', $cota) || // Format: II-3878, II-48419
+              preg_match('/^[A-Z]{2,}\s+[IVX]+/', $cota)) { // Format: DAB II
+        // Format Aleph → read-only
+        $cota_din_aleph = true;
+    } else {
+        // Pentru alte formate, verifică dacă are format numeric cu puncte dar FĂRĂ litere la sfârșit
+        // Dacă are doar format numeric (ex: "821.135.1" fără litere la sfârșit), e probabil din Aleph
+        if (preg_match('/^\d+\.\d+\.\d+$/', $cota)) {
+            $cota_din_aleph = true;
+        } else {
+            $cota_din_aleph = false;
+        }
+    }
+}
 
 if (!$imprumut) {
     die('Împrumutul nu a fost găsit');
@@ -89,6 +140,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data_imprumut = trim($_POST['data_imprumut']);
     $data_returnare = trim($_POST['data_returnare']);
     $status = trim($_POST['status']);
+    $titlu_nou = trim($_POST['titlu_carte'] ?? '');
+    $autor_nou = trim($_POST['autor_carte'] ?? '');
+    $cod_bare_nou = trim($_POST['cod_bare_carte'] ?? '');
+    $cota_noua = trim($_POST['cota_carte'] ?? '');
 
     try {
         // Logică automată: Dacă status = "returnat" și nu ai dată, pune data curentă
@@ -101,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status = 'returnat';
         }
 
+        // Actualizează împrumutul
         $stmt = $pdo->prepare("
             UPDATE imprumuturi
             SET data_imprumut = ?, data_returnare = ?, status = ?
@@ -112,7 +168,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt->execute([$data_imprumut, $data_returnare_null, $status, $id]);
 
+        // Verifică din nou dacă codul de bare și cota vin din Aleph (pentru a preveni modificarea)
+        $cod_bare_din_aleph_post = false;
+        $cota_din_aleph_post = false;
+        
+        if (!empty($imprumut['carte_cod_bare'])) {
+            $cod_bare_check = $imprumut['carte_cod_bare'];
+            if (preg_match('/^000\d+-?\d*$/', $cod_bare_check) ||
+                preg_match('/^\d{9,}-\d+$/', $cod_bare_check) ||
+                (preg_match('/^\d{6,}/', $cod_bare_check) && strlen($cod_bare_check) >= 10)) {
+                $cod_bare_din_aleph_post = true;
+            }
+            if (preg_match('/^(BOOK|C)\d+/i', $cod_bare_check)) {
+                $cod_bare_din_aleph_post = false;
+            }
+        }
+        
+        if (!empty($imprumut['carte_cota'])) {
+            $cota_check = $imprumut['carte_cota'];
+            
+            // Verifică dacă se termină cu 2-3 litere (ex: "PET u", "CRE a") → MANUALĂ, editabilă
+            if (preg_match('/\s+[A-Z]{2,3}\s*[a-z]?\s*$/i', $cota_check)) {
+                $cota_din_aleph_post = false;
+            } elseif (preg_match('/^[A-Z]{2,}\s+[A-Z]+\s*-\s*\d+/', $cota_check) ||
+                      preg_match('/^[A-Z]{2,}\s*-\s*\d+/', $cota_check) ||
+                      preg_match('/^[A-Z]{2,}\s+[IVX]+/', $cota_check)) {
+                // Format Aleph → read-only
+                $cota_din_aleph_post = true;
+            } else {
+                // Pentru alte formate, verifică dacă are format numeric cu puncte dar FĂRĂ litere la sfârșit
+                if (preg_match('/^\d+\.\d+\.\d+$/', $cota_check)) {
+                    $cota_din_aleph_post = true;
+                } else {
+                    $cota_din_aleph_post = false;
+                }
+            }
+        }
+        
+        // Actualizează titlul, autorul, codul de bare și cota cărții în baza de date locală (NU în Aleph)
+        // IMPORTANT: Nu actualizăm cod_bare sau cota dacă provin din Aleph
+        if (!empty($titlu_nou) || !empty($autor_nou) || (!empty($cod_bare_nou) && !$cod_bare_din_aleph_post) || (!empty($cota_noua) && !$cota_din_aleph_post)) {
+            $update_carte_fields = [];
+            $update_carte_values = [];
+            
+            if (!empty($titlu_nou)) {
+                $update_carte_fields[] = "titlu = ?";
+                $update_carte_values[] = $titlu_nou;
+            }
+            
+            if (!empty($autor_nou)) {
+                $update_carte_fields[] = "autor = ?";
+                $update_carte_values[] = $autor_nou;
+            }
+            
+            // Actualizează cod_bare DOAR dacă NU provine din Aleph
+            if (!empty($cod_bare_nou) && !$cod_bare_din_aleph_post) {
+                $update_carte_fields[] = "cod_bare = ?";
+                $update_carte_values[] = $cod_bare_nou;
+            }
+            
+            // Actualizează cota DOAR dacă NU provine din Aleph
+            if (!empty($cota_noua) && !$cota_din_aleph_post) {
+                $update_carte_fields[] = "cota = ?";
+                $update_carte_values[] = $cota_noua;
+            }
+            
+            if (!empty($update_carte_fields)) {
+                $update_carte_values[] = $cod_carte; // Pentru WHERE
+                $stmt_carte = $pdo->prepare("
+                    UPDATE carti
+                    SET " . implode(", ", $update_carte_fields) . "
+                    WHERE cod_bare = ?
+                ");
+                $stmt_carte->execute($update_carte_values);
+                
+                // Dacă s-a schimbat codul de bare (și nu provine din Aleph), actualizează și în tabelul imprumuturi
+                if (!empty($cod_bare_nou) && $cod_bare_nou !== $cod_carte && !$cod_bare_din_aleph_post) {
+                    $stmt_update_imprumut = $pdo->prepare("
+                        UPDATE imprumuturi
+                        SET cod_carte = ?
+                        WHERE cod_carte = ?
+                    ");
+                    $stmt_update_imprumut->execute([$cod_bare_nou, $cod_carte]);
+                }
+            }
+        }
+        
+        // Mesaj de avertizare dacă s-a încercat să se modifice câmpuri din Aleph
+        if (($cod_bare_din_aleph_post && !empty($cod_bare_nou) && $cod_bare_nou !== $imprumut['carte_cod_bare']) ||
+            ($cota_din_aleph_post && !empty($cota_noua) && $cota_noua !== $imprumut['carte_cota'])) {
+            $mesaj .= "<br>⚠️ <strong>Notă:</strong> Codul de bare sau cota provin din Aleph și nu pot fi modificate.";
+        }
+
         $mesaj = "✅ Împrumutul a fost actualizat cu succes!";
+        if (!empty($titlu_nou) || !empty($autor_nou) || !empty($cod_bare_nou) || !empty($cota_noua)) {
+            $mesaj .= "<br>📚 Informațiile cărții au fost actualizate local (nu în Aleph).";
+        }
         $tip_mesaj = "success";
 
         // Reîncarcă datele
@@ -121,6 +272,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 i.*,
                 c.titlu as carte_titlu,
                 c.autor as carte_autor,
+                c.cod_bare as carte_cod_bare,
+                c.cota as carte_cota,
+                c.data_adaugare as carte_data_adaugare,
                 cit.nume as cititor_nume,
                 cit.prenume as cititor_prenume
             FROM imprumuturi i
@@ -130,6 +284,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$id]);
         $imprumut = $stmt->fetch();
+        
+        // Recalculează flag-urile pentru Aleph după actualizare
+        $cod_bare_din_aleph = false;
+        $cota_din_aleph = false;
+        
+        if (!empty($imprumut['carte_cod_bare'])) {
+            $cod_bare = $imprumut['carte_cod_bare'];
+            if (preg_match('/^000\d+-?\d*$/', $cod_bare) ||
+                preg_match('/^\d{9,}-\d+$/', $cod_bare) ||
+                (preg_match('/^\d{6,}/', $cod_bare) && strlen($cod_bare) >= 10)) {
+                $cod_bare_din_aleph = true;
+            }
+            if (preg_match('/^(BOOK|C)\d+/i', $cod_bare)) {
+                $cod_bare_din_aleph = false;
+            }
+        }
+        
+        if (!empty($imprumut['carte_cota'])) {
+            $cota = $imprumut['carte_cota'];
+            
+            // Verifică dacă se termină cu 2-3 litere (ex: "PET u", "CRE a", "ELI m") → MANUALĂ, editabilă
+            if (preg_match('/\s+[A-Z]{2,3}\s*[a-z]?\s*$/i', $cota)) {
+                // Se termină cu spațiu + 2-3 litere → e manuală, NU e din Aleph
+                $cota_din_aleph = false;
+            } elseif (preg_match('/^[A-Z]{2,}\s+[A-Z]+\s*-\s*\d+/', $cota) ||
+                      preg_match('/^[A-Z]{2,}\s*-\s*\d+/', $cota) ||
+                      preg_match('/^[A-Z]{2,}\s+[IVX]+/', $cota)) {
+                // Format Aleph → read-only
+                $cota_din_aleph = true;
+            } else {
+                // Pentru alte formate, verifică dacă are format numeric cu puncte dar FĂRĂ litere la sfârșit
+                if (preg_match('/^\d+\.\d+\.\d+$/', $cota)) {
+                    $cota_din_aleph = true;
+                } else {
+                    $cota_din_aleph = false;
+                }
+            }
+        }
 
     } catch (PDOException $e) {
         $mesaj = "❌ Eroare: " . $e->getMessage();
@@ -349,8 +541,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="info-box">
             <h3>ℹ️ Informații importante</h3>
             <ul>
-                <li><strong>Cititorul și cartea NU pot fi modificate</strong> - sunt fixe pentru acest împrumut</li>
-                <li>Poți edita doar: data împrumutului, data returnării și statusul</li>
+                <li><strong>Cititorul NU poate fi modificat</strong> - este fix pentru acest împrumut</li>
+                <li>Poți edita: data împrumutului, data returnării, statusul</li>
+                <li>Poți modifica informațiile cărții: titlu, autor, cod de bare, cotă (doar local, nu în Aleph)</li>
+                <li><strong>Modificările la carte</strong> se aplică doar local în baza de date, nu în Aleph</li>
                 <li>Statusul se actualizează automat când adaugi dată returnare</li>
             </ul>
         </div>
@@ -385,8 +579,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </span>
                         <br>
                         <span style="font-size: 0.9em; color: #667eea;">
-                            <?php echo htmlspecialchars($imprumut['cod_carte']); ?>
+                            Cod bare: <?php echo htmlspecialchars($imprumut['cod_carte']); ?>
                         </span>
+                        <?php if (!empty($imprumut['carte_cota'])): ?>
+                            <br>
+                            <span style="font-size: 0.9em; color: #28a745;">
+                                Cotă: <?php echo htmlspecialchars($imprumut['carte_cota']); ?>
+                            </span>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -423,6 +623,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             📥 Returnată
                         </option>
                     </select>
+                </div>
+
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #28a745;">
+                    <h4 style="color: #28a745; margin-bottom: 15px; font-size: 1.1em;">📚 Modifică informații carte (doar local)</h4>
+                    <p style="font-size: 0.9em; color: #6c757d; margin-bottom: 15px;">
+                        Modificările se aplică doar în baza de date locală, nu în Aleph. Util pentru cazurile când datele lipsesc din Aleph.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Modifică Titlu</label>
+                        <input type="text"
+                               name="titlu_carte"
+                               value="<?php echo htmlspecialchars($imprumut['carte_titlu'], ENT_QUOTES, 'UTF-8'); ?>"
+                               placeholder="Titlul cărții">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modifică Autor</label>
+                        <input type="text"
+                               name="autor_carte"
+                               value="<?php echo htmlspecialchars($imprumut['carte_autor'] ?: '', ENT_QUOTES, 'UTF-8'); ?>"
+                               placeholder="Autorul cărții">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modifică Cod de bare
+                            <?php if ($cod_bare_din_aleph): ?>
+                                <span style="color: #6c757d; font-size: 0.85em; font-weight: normal;">(din Aleph - read-only)</span>
+                            <?php endif; ?>
+                        </label>
+                        <input type="text"
+                               name="cod_bare_carte"
+                               value="<?php echo htmlspecialchars($imprumut['carte_cod_bare'] ?: $imprumut['cod_carte'], ENT_QUOTES, 'UTF-8'); ?>"
+                               placeholder="Codul de bare al cărții"
+                               <?php echo $cod_bare_din_aleph ? 'readonly style="background: #e9ecef; cursor: not-allowed;"' : ''; ?>>
+                        <?php if ($cod_bare_din_aleph): ?>
+                            <small style="color: #856404; font-size: 0.85em;">⚠️ Codul de bare provine din Aleph și nu poate fi modificat</small>
+                        <?php else: ?>
+                            <small style="color: #6c757d; font-size: 0.85em;">💡 Util când codul de bare lipsește sau este greșit</small>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modifică Cotă
+                            <?php if ($cota_din_aleph): ?>
+                                <span style="color: #6c757d; font-size: 0.85em; font-weight: normal;">(din Aleph - read-only)</span>
+                            <?php endif; ?>
+                        </label>
+                        <input type="text"
+                               name="cota_carte"
+                               value="<?php echo htmlspecialchars($imprumut['carte_cota'] ?: '', ENT_QUOTES, 'UTF-8'); ?>"
+                               placeholder="Cota cărții"
+                               <?php echo $cota_din_aleph ? 'readonly style="background: #e9ecef; cursor: not-allowed;"' : ''; ?>>
+                        <?php if ($cota_din_aleph): ?>
+                            <small style="color: #856404; font-size: 0.85em;">⚠️ Cota provine din Aleph și nu poate fi modificată</small>
+                        <?php else: ?>
+                            <small style="color: #6c757d; font-size: 0.85em;">💡 Util când cota lipsește sau este greșită</small>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <button type="submit">💾 Salvează modificările</button>

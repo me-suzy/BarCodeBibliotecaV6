@@ -62,10 +62,10 @@ function valideazaCodUser($cod) {
 }
 
 /**
- * Detectează tipul de cod (Aleph sau USER)
+ * Detectează tipul de cod (Aleph, USER sau Biblioteca Academiei)
  * 
  * @param string $cod Codul de verificat
- * @return string|false 'aleph', 'user', sau false dacă nu este recunoscut
+ * @return string|false 'aleph', 'user', 'biblioteca_academiei', sau false dacă nu este recunoscut
  */
 function detecteazaTipCod($cod) {
     $cod = trim((string)$cod);
@@ -78,6 +78,11 @@ function detecteazaTipCod($cod) {
     // Verifică format USER
     if (valideazaCodUser($cod)) {
         return 'user';
+    }
+    
+    // Verifică format Biblioteca Academiei Române - Iași (14016xxx - 8 cifre, începe cu 14016)
+    if (preg_match('/^14016\d{3}$/', $cod)) {
+        return 'biblioteca_academiei';
     }
     
     return false;

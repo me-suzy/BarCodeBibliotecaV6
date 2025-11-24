@@ -55,7 +55,7 @@ Sau folosește un serviciu de cron online pentru a rula scriptul zilnic.
 
 #### Notificări email
 - Utilizatorii cu cărți întârziate primesc email de notificare
-- Email trimis de la: YOUR-USER@gmail.com
+- Email trimis de la: YOUR-MAIL@gmail.com
 - Scriptul `cron_notificari_intarzieri.php` trebuie rulat zilnic
 
 ## Structura Bazei de Date

@@ -16,7 +16,7 @@ Am configurat trimiterea de email prin Gmail SMTP. Am creat funcția `send_email
 
 1. Creat `send_email.php` — funcție helper pentru trimitere email prin Gmail SMTP
 2. Actualizat `sistem_notificari.php`:
-   - Email corect: `bebef@gmail.com` (nu YOUR-USER)
+   - Email corect: `bebef@gmail.com` (nu YOUR-MAIL)
    - Folosește funcția SMTP nouă
    - Email de test precompletat cu `ioan.fantanaru@gmail.com`
    - Mesaje de eroare mai clare

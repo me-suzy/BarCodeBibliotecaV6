@@ -5,7 +5,7 @@
  */
 
 // Credențiale server
-$SERVER_IP = "83.146.133.42";
+$SERVER_IP = "65.176.121.45";
 $SSH_USER = "root";
 $SSH_PASS = "YOUR-PASSWORD";
 $SSH_PORT = 22;

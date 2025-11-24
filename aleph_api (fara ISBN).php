@@ -5,7 +5,7 @@ require_once 'auth_check.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-$ALEPH_SERVER = "83.146.133.42";
+$ALEPH_SERVER = "65.176.121.45";
 $ALEPH_PORT = "8991";
 $ALEPH_BASE_URL = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/F";
 

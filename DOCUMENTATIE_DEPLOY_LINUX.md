@@ -92,7 +92,7 @@ Sistemul folosește **o bază de date MySQL/MariaDB complet separată** de Aleph
 ### Configurare Aleph (opțional):
 Dacă vrei să folosești Aleph pentru citire, editează `aleph_api.php`:
 ```php
-define('ALEPH_SERVER', '83.146.133.42'); // IP-ul serverului Aleph
+define('ALEPH_SERVER', '65.176.121.45'); // IP-ul serverului Aleph
 define('ALEPH_PORT', '8991');
 ```
 
@@ -150,7 +150,7 @@ După deploy, verifică:
 ## 🔍 Verificare Server Linux (ÎNAINTE DE DEPLOY)
 
 ### Informații Server:
-- **IP:** 83.146.133.42
+- **IP:** 65.176.121.45
 - **Port SSH:** 22
 - **User:** root
 - **Parolă:** (vezi `Date Login SERVER.txt`)
@@ -167,7 +167,7 @@ ssh -o StrictHostKeyChecking=no \
     -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 \
     -o HostKeyAlgorithms=+ssh-rsa \
     -o MACs=+hmac-sha1 \
-    root@83.146.133.42
+    root@65.176.121.45
 
 # Apoi rulează:
 df -h
@@ -217,7 +217,7 @@ Vezi `check_server_manual.txt` pentru instrucțiuni detaliate.
 
 **Opțiunea 3: PuTTY (Windows)**
 1. Deschide PuTTY
-2. Host: 83.146.133.42, Port: 22
+2. Host: 65.176.121.45, Port: 22
 3. Login: root
 4. Rulează comenzile de verificare
 
@@ -283,7 +283,7 @@ mysql -u root -p biblioteca < biblioteca.sql
 ```
 
 **Pasul 5: Actualizare tabele noi**
-Accesează: `http://83.146.133.42/biblioteca/update_database.php`
+Accesează: `http://65.176.121.45/biblioteca/update_database.php`
 
 ### Backup și Restaurare
 

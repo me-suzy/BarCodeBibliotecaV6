@@ -19,11 +19,22 @@ if (empty($barcode)) {
 }
 
 try {
-    // Verifică dacă este cod CITITOR
-    if (preg_match('/^USER\d+$/i', $barcode)) {
-        $stmt = $pdo->prepare("SELECT * FROM cititori WHERE cod_bare = ?");
-        $stmt->execute([strtoupper($barcode)]);
-        $cititor = $stmt->fetch();
+    require_once 'functions_coduri_aleph.php';
+    
+    // Detectează tipul de cod (USER, Aleph sau Biblioteca Academiei)
+    $tip_cod = detecteazaTipCod($barcode);
+    
+    // Verifică dacă este cod CITITOR (USER, Aleph sau Biblioteca Academiei)
+    if ($tip_cod === 'user' || $tip_cod === 'aleph' || $tip_cod === 'biblioteca_academiei') {
+        // Folosește funcția helper pentru a găsi cititorul
+        $cititor = gasesteCititorDupaCod($pdo, $barcode);
+        
+        // Fallback la metoda veche dacă funcția helper nu găsește
+        if (!$cititor) {
+            $stmt = $pdo->prepare("SELECT * FROM cititori WHERE cod_bare = ?");
+            $stmt->execute([$barcode]);
+            $cititor = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
 
         if ($cititor) {
             // 1. SALVEAZĂ PREZENȚA în istoric
@@ -31,7 +42,7 @@ try {
                 INSERT INTO sesiuni_biblioteca (cod_cititor, data, ora_intrare)
                 VALUES (?, CURDATE(), CURTIME())
             ");
-            $stmt_prezenta->execute([strtoupper($barcode)]);
+            $stmt_prezenta->execute([$cititor['cod_bare']]);
 
             // 2. ACTUALIZEAZĂ SESIUNEA ACTIVĂ (ultimul utilizator scanat)
             $_SESSION['cititor_activ'] = [
@@ -59,7 +70,7 @@ try {
         } else {
             echo json_encode([
                 'success' => false,
-                'message' => "⚠️ Cititorul {$barcode} nu există în baza de date!"
+                'message' => "⚠️ Cititorul nu există în baza de date!"
             ]);
         }
         exit;

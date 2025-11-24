@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 20, 2025 at 11:39 AM
+-- Generation Time: Nov 24, 2025 at 09:01 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -62,16 +62,19 @@ INSERT INTO `carti` (`id`, `cod_bare`, `statut`, `titlu`, `autor`, `isbn`, `cota
 (14, 'BOOK014', '01', 'Citadela sfărmată', 'Tudor Arghezi', '9789734640652', '821.135.1 ARG c', 'B', '1', '03', '', '', '2025-11-15 15:12:05'),
 (15, 'BOOK015', '01', 'Groapa', 'Eugen Barbu', '9789734640669', '821.135.1 BAR g', 'B', '1', '04', 'Literatur?? rom??n??', NULL, '2025-11-15 15:12:05'),
 (17, 'BOOK0040', '01', 'Yoga', 'Henri stahl', '', '', '', '', '', '', '', '2025-11-15 23:09:21'),
-(19, 'C195082', '01', 'Antropologie stilistică', 'Popa, Mihai', '978-973-27-2824-6', 'II-57001', '', '', '', 'Cărţi depozit', '', '2025-11-17 17:37:51'),
-(20, '59281-10', '01', 'Om, creaţie, libertate', 'Sandor, Ioana Camelia', '978-973-166-087-5', 'II-52455', '', '', '', '', '', '2025-11-17 17:47:58'),
-(23, 'C181337', '01', 'Lucian Blaga : Mitul poetic', 'Todoran, Eugen', '', 'II-1693', NULL, NULL, NULL, 'Cărţi sala de lectură', NULL, '2025-11-17 17:58:02'),
-(24, '000030207-10', '01', 'St. Monografia Serviciului Sanitar Veterinar al Municipiului Bucureşti', 'RĂDULESCU, Const', '', 'II-3878', '', '', '', 'Cărţi sala de lectură', '', '2025-11-17 20:30:47'),
+(19, 'C195082', '01', 'Antropologie stilistică / Mihai Popa : item-global-head-2 -->', 'Popa, Mihai', '978-973-27-2824-6', 'II-57001', '', '', '', 'Cărţi depozit', '', '2025-11-17 17:37:51'),
+(20, '59281-10', '01', 'Om, creaţie, libertate : Cultura ca orizont ontologic uman în concepţia filozofului Lucian Blaga', 'Şandor, Ioana Camelia', '978-973-166-087-5', 'II-52455', '', '', '', 'Cărţi depozit', '', '2025-11-17 17:47:58'),
+(23, 'C181337', '01', 'Lucian Blaga : Mitul poetic', 'Todoran, Eugen', '', 'SL DI II-1693', NULL, NULL, NULL, 'Cărţi sala de lectură', NULL, '2025-11-17 17:58:02'),
+(24, '000030207-10', '01', 'St. Monografia Serviciului Sanitar Veterinar al Municipiului Bucureşti / Const. St. Rădulescu, medic veterinar, Inspector General : item-global-head-2 -->', 'RĂDULESCU, Const', '', 'DAB II-3878', '', '', '', 'Cărţi sala de lectură', '', '2025-11-17 20:30:47'),
 (25, '000029152-10', '01', 'Raport asupra legii pentru organizarea comunelor rurale', 'gaga Mihai', '', 'DAB II-01270', '', '', '', '', '', '2025-11-17 20:35:10'),
 (27, '000048576-10', '01', 'STRECHA NAD HLAVOU : PRACOVNI SETKANI O NEJSTARSI ARCHITEKTURE', 'Jelinek, Jan, ed', '', 'II-1270', NULL, NULL, NULL, '', NULL, '2025-11-18 04:03:36'),
 (28, 'BOOK0002', '01', 'Sfârşitul zilei mari', 'Henri stahl', '', '', '', '', '', '', '', '2025-11-18 19:59:31'),
 (29, 'BOOK0001', '01', 'Acasa', 'Dan Brown', '', '', '', '', '', '', '', '2025-11-18 21:36:34'),
 (33, 'C198855', '01', 'Avădănei, Ioana (trad.). Economia comestibilă : poveşti despre mâncare ce îţi vor schimba felul de a vedea lumea', 'Chang, Ha-Joon', '', 'II-57981', NULL, NULL, NULL, 'Cărţi depozit', NULL, '2025-11-19 06:41:06'),
-(38, '000015237-10', '01', 'Minunea Sfîntului Baudolino', 'ECO, Umberto', '', 'II-48419', NULL, NULL, NULL, 'Cărţi depozit', NULL, '2025-11-19 18:58:57');
+(39, '000015237-10', '01', 'Minunea Sfîntului Baudolino / Umberto Eco ; trad. din italiană de Sorin Mărculescu : item-global-head-2 -->', 'ECO, Umberto', '', 'II-48419', NULL, NULL, NULL, 'Cărţi depozit', NULL, '2025-11-22 12:50:46'),
+(40, '546DFFGG', '01', 'Carte Noua', 'JIoii', '', '', '', '', '', '', '', '2025-11-22 16:09:22'),
+(41, 'RV00152', '03', 'Mavrocordat, Nicolae Alexandru, domn al Ţării Româneşti (patron) &nbsp;1715-171. Marcovici, Ieremia (tip.). [Sfânta şi Dumnezeiasca Liturghie a Sfântului Ioan Zlatoust, a Marelui Vasilie şi a Sfântului Grigorie... ] / [Cu blagoslovenia prea sfinţitului Pa', 'Hrysanthos, Patriarhul Ierusalimului (patron)', '', 'RV I-136', NULL, NULL, NULL, 'Carte romanească veche', NULL, '2025-11-22 18:30:35'),
+(42, 'RR03511', '03', 'Codice de comerciu al Regatului României din 1887 : Cu modificaţiunile introduse prin Legea din 20 iunie 1895 şi Regulamentul din 7 septembrie 1887 şi cel din 20 iunie 1895', 'Ministerul Justiţiei', '', 'RR III-382', NULL, NULL, NULL, 'Carte romanească rară', NULL, '2025-11-22 18:31:10');
 
 -- --------------------------------------------------------
 
@@ -107,7 +110,7 @@ INSERT INTO `cititori` (`id`, `cod_bare`, `statut`, `nume`, `prenume`, `telefon`
 (16, 'USER021', '14', 'Hichi', 'Ion++', '0740152808', 'hichi@yahoo.com', 0, NULL, '2025-11-16 13:09:19', '2025-02-14', NULL),
 (17, 'USER011', '14', 'Marius', 'Popa Ion', '34535446546', 'ioan.fantanaru@gmail.com', 0, NULL, '2025-11-17 17:15:34', '2025-11-17', NULL),
 (18, 'USER014', '14', 'Dovleac', 'Maria', '345353', 'dovleaa@dfs.com', 0, NULL, '2025-11-18 19:56:01', '2025-11-18', NULL),
-(19, '120000001060', '14', 'Cod Bar', 'serie noua', '47547476575', 'me.suzana@gmail.com', 0, NULL, '2025-11-19 11:25:28', NULL, NULL);
+(20, '14016038', '14', 'Fantanaru', 'Neculai', '0740152808', 'ioan.fantanaru@gmail.com', 0, NULL, '2025-11-21 11:38:12', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -186,7 +189,7 @@ INSERT INTO `imprumuturi` (`id`, `cod_cititor`, `cod_carte`, `data_imprumut`, `d
 (66, 'USER005', 'BOOK015', '2025-11-16 09:31:20', NULL, NULL, 'activ'),
 (67, 'USER011', 'C195082', '2025-11-17 17:46:27', '2025-12-01', '2025-11-17 20:31:17', 'returnat'),
 (68, 'USER011', '59281-10', '2025-11-17 17:47:58', '2025-12-01', '2025-11-17 20:32:11', 'returnat'),
-(72, 'USER011', '000030207-10', '2025-11-17 20:30:47', '2025-12-01', NULL, 'activ'),
+(72, 'USER011', '000030207-10', '2025-11-17 20:30:00', '2025-12-01', NULL, 'activ'),
 (73, 'USER011', 'C195082', '2025-11-17 20:31:28', '2025-12-01', '2025-11-17 20:31:31', 'returnat'),
 (74, 'USER011', 'C195082', '2025-11-17 20:31:40', '2025-12-01', '2025-11-17 20:31:53', 'returnat'),
 (75, 'USER011', '000029152-10', '2025-11-17 20:35:10', '2025-12-01', '2025-11-18 02:44:30', 'returnat'),
@@ -213,8 +216,10 @@ INSERT INTO `imprumuturi` (`id`, `cod_cititor`, `cod_carte`, `data_imprumut`, `d
 (102, 'USER011', 'BOOK0002', '2025-11-19 00:27:19', '2025-12-03', NULL, 'activ'),
 (103, 'USER001', 'BOOK001', '2025-11-19 17:18:00', '2025-12-03', '2025-11-19 21:40:00', 'returnat'),
 (105, 'USER001', 'BOOK002', '2025-11-19 17:28:33', '2025-12-03', NULL, 'activ'),
-(106, 'USER001', '000015237-10', '2025-11-19 18:58:57', '2025-12-03', NULL, 'activ'),
-(107, 'USER001', 'BOOK009', '2025-11-19 21:42:04', '2025-12-03', NULL, 'activ');
+(107, 'USER001', 'BOOK009', '2025-11-19 21:42:04', '2025-12-03', NULL, 'activ'),
+(108, 'USER001', '000015237-10', '2025-11-22 12:50:00', '2025-12-06', '2025-11-22 16:06:00', 'returnat'),
+(109, 'USER001', '546DFFGG', '2025-11-22 16:10:00', '2025-12-06', '2025-11-22 16:10:00', 'returnat'),
+(110, 'USER001', '000015237-10', '2025-11-22 18:31:55', '2025-12-06', NULL, 'activ');
 
 -- --------------------------------------------------------
 
@@ -601,19 +606,19 @@ ALTER TABLE `utilizatori`
 -- AUTO_INCREMENT for table `carti`
 --
 ALTER TABLE `carti`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `cititori`
 --
 ALTER TABLE `cititori`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `imprumuturi`
 --
 ALTER TABLE `imprumuturi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=108;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=111;
 
 --
 -- AUTO_INCREMENT for table `istoric_locatii`

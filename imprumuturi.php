@@ -24,6 +24,8 @@ $stmt = $pdo->prepare("
         i.data_imprumut,
         c.titlu,
         c.autor,
+        c.cod_bare,
+        c.cota,
         c.locatie_completa,
         cit.nume,
         cit.prenume,
@@ -330,6 +332,47 @@ function generatePaginationLink($page_num, $current_page) {
             color: #666;
             font-size: 0.9em;
         }
+
+        .app-footer {
+            text-align: right;
+            padding: 30px 40px;
+            margin-top: 40px;
+            background: transparent;
+        }
+
+        .app-footer p {
+            display: inline-block;
+            margin: 0;
+            padding: 13px 26px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(13px);
+            border-radius: 22px;
+            color: white;
+            font-weight: 400;
+            font-size: 0.9em;
+            box-shadow: 0 0 18px rgba(196, 181, 253, 0.15),
+                        0 4px 16px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.45s ease;
+            position: relative;
+        }
+
+        .app-footer p::before {
+            content: '💡';
+            margin-right: 10px;
+            font-size: 1.15em;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+        }
+
+        .app-footer p:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+            box-shadow: 0 0 35px rgba(196, 181, 253, 0.3),
+                        0 8px 24px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -399,7 +442,12 @@ function generatePaginationLink($page_num, $current_page) {
                                     <!-- Informații carte -->
                                     <td class="carte-row">
                                         <div class="book-title"><?php echo htmlspecialchars($carte['titlu']); ?></div>
-                                        <div class="book-code"><?php echo htmlspecialchars($carte['cod_carte']); ?></div>
+                                        <div class="book-code"><?php echo htmlspecialchars($carte['cod_bare'] ?: $carte['cod_carte']); ?></div>
+                                        <?php if (!empty($carte['cota'])): ?>
+                                            <div style="font-size: 0.9em; color: #28a745; margin-top: 4px;">
+                                                📖 Cotă: <?php echo htmlspecialchars($carte['cota']); ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="carte-row"><?php echo htmlspecialchars($carte['autor'] ?: '-'); ?></td>
                                     <td class="carte-row">
@@ -471,6 +519,11 @@ function generatePaginationLink($page_num, $current_page) {
             <?php else: ?>
                 <div class="no-data">🔭 Nu există împrumuturi active</div>
             <?php endif; ?>
+        </div>
+
+        <!-- Footer -->
+        <div class="app-footer">
+            <p>Dezvoltare web: Neculai Ioan Fantanaru</p>
         </div>
     </div>
 </body>

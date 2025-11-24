@@ -25,7 +25,7 @@ Vrem să creăm o bază de date numită **`biblioteca`** pe serverul Linux care 
 ## ✅ Ce Este Necesar (Prerequisituri)
 
 ### 1. **Server Linux Accesibil**
-- ✅ Serverul tău: `83.146.133.42`
+- ✅ Serverul tău: `65.176.121.45`
 - ✅ Acces SSH (user: `root`, parolă: `YOUR-PASSWORD`)
 - ✅ Port SSH: `22`
 
@@ -85,7 +85,7 @@ Nu este obligatoriu, dar ajută să înțelegi comenzile SQL.
 Conectează-te la serverul Linux prin SSH:
 
 ```bash
-ssh root@83.146.133.42
+ssh root@65.176.121.45
 ```
 
 **Sau cu opțiuni pentru compatibilitate:**
@@ -94,7 +94,7 @@ ssh -o StrictHostKeyChecking=no \
     -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 \
     -o HostKeyAlgorithms=+ssh-rsa \
     -o MACs=+hmac-sha1 \
-    root@83.146.133.42
+    root@65.176.121.45
 ```
 
 **Introdu parola:** `YOUR-PASSWORD`
@@ -437,7 +437,7 @@ Pe computerul tău local, creează fișierul `setup_database.sql` cu toate comen
 
 ```bash
 # Din computerul tău local
-scp setup_database.sql root@83.146.133.42:/tmp/
+scp setup_database.sql root@65.176.121.45:/tmp/
 ```
 
 ### **PASUL 3: Rulează scriptul**
@@ -541,7 +541,7 @@ echo "✅ Conexiune reușită!";
 ?>
 ```
 
-Accesează: `http://83.146.133.42/biblioteca/test_connection.php`
+Accesează: `http://65.176.121.45/biblioteca/test_connection.php`
 
 ---
 
@@ -577,7 +577,7 @@ MySQL Server
 
 ```bash
 # 1. Conectare server
-ssh root@83.146.133.42
+ssh root@65.176.121.45
 
 # 2. Conectare MySQL
 mysql -u root -p

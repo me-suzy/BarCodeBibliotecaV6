@@ -39,9 +39,9 @@ debug_log("SESSION before: " . print_r($_SESSION, true));
 $config_email = [
     'smtp_host' => 'smtp.gmail.com',
     'smtp_port' => 587,
-    'smtp_user' => 'YOUR-USER@gmail.com',
-    'smtp_pass' => 'xxxx xxxx xxxx xxxx',
-    'from_email' => 'YOUR-USER@gmail.com',
+    'smtp_user' => 'YOUR-MAIL@gmail.com',
+    'smtp_pass' => 'GOOGLE SECRET PASSWORD',
+    'from_email' => 'YOUR-MAIL@gmail.com',
     'from_name' => 'Biblioteca Academiei Române - Iași'
 ];
 
@@ -235,8 +235,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tip_cod = detecteazaTipCod($cod_scanat);
             debug_log("Tip cod detectat: $tip_cod");
             
-            // Verifică dacă este cod de cititor (USER sau Aleph)
-            if ($tip_cod === 'user' || $tip_cod === 'aleph') {
+            // Verifică dacă este cod de cititor (USER, Aleph sau Biblioteca Academiei)
+            if ($tip_cod === 'user' || $tip_cod === 'aleph' || $tip_cod === 'biblioteca_academiei') {
                 // Folosește funcția helper pentru a găsi cititorul
                 $cititor = gasesteCititorDupaCod($pdo, $cod_scanat);
                 
@@ -304,170 +304,211 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (preg_match('/\?/', $autor) && strlen($autor) > 3));
                 };
                 
-                // Caută cartea în baza locală - mai întâi după cod_bare, apoi după cota
-                $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
-                $stmt->execute([$cod_scanat]);
-                $carte = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($carte) {
-                    debug_log("Carte gasita in baza locala: " . substr($carte['titlu'] ?? 'N/A', 0, 50));
-                    // Verifică dacă datele sunt corupte
-                    if ($verificaDateCorupte($carte)) {
-                        debug_log("Carte gasita are date corupte (semne de intrebare) - recautare in Aleph pentru actualizare");
-                        $carte = null; // Forțează re-căutare în Aleph
-                    }
-                } else {
-                    debug_log("Carte NU gasita in baza locala, cautare in Aleph...");
+                // IMPORTANT: Verificăm ÎNTOTDEAUNA în Aleph, chiar dacă cartea există în baza locală
+                require_once 'aleph_api.php';
+                
+                // Inițializăm variabilele pentru a preveni erori
+                $carte = null;
+                $mesaj = null;
+                $tip_mesaj = null;
+                $aleph_eroare = false; // Flag explicit pentru eroare Aleph
+                $carte_gasita_doar_local = false; // Flag pentru carte găsită doar în baza locală (nu în Aleph)
+                
+                // Căutare automată cu fallback (BAR → LOC → WRD)
+                $rezultat_aleph = cautaCarteInAleph($cod_scanat, 'AUTO');
+                
+                // Verifică dacă cartea există în Aleph
+                // IMPORTANT: Simplificăm logica - dacă success=true și există titlu valid, cartea există
+                $carte_gasita_in_aleph = false;
+                if ($rezultat_aleph['success']) {
+                    $date_carte = $rezultat_aleph['data'] ?? [];
+                    $titlu_aleph = trim($date_carte['titlu'] ?? '');
+                    
+                    // Verifică dacă titlul este generic (mesaje de eroare)
+                    $titlu_generic = (
+                        stripos($titlu_aleph, 'Căutări anterioare') !== false ||
+                        stripos($titlu_aleph, 'Previous searches') !== false ||
+                        stripos($titlu_aleph, 'Catalog general') !== false ||
+                        stripos($titlu_aleph, 'Căutare de bază') !== false ||
+                        empty($titlu_aleph) ||
+                        strlen($titlu_aleph) < 3
+                    );
+                    
+                    // Cartea este găsită dacă titlul nu este generic
+                    // (aleph_api.php deja verifică că există titlu valid înainte de a returna success=true)
+                    $carte_gasita_in_aleph = !$titlu_generic;
+                    
+                    debug_log("Verificare Aleph: success=" . ($rezultat_aleph['success'] ? 'true' : 'false') . 
+                              ", titlu='" . substr($titlu_aleph, 0, 50) . 
+                              "', barcode='" . substr(trim($date_carte['barcode'] ?? ''), 0, 20) . 
+                              "', cota='" . substr(trim($date_carte['cota'] ?? ''), 0, 20) .
+                              "', carte_gasita=" . ($carte_gasita_in_aleph ? 'true' : 'false'));
                 }
                 
-                // Dacă nu găsește după cod_bare, caută după cota
-                if (!$carte) {
-                    $stmt = $pdo->prepare("SELECT * FROM carti WHERE cota = ?");
+                if (!$rezultat_aleph['success'] || !$carte_gasita_in_aleph) {
+                    // Cartea NU există în Aleph - caută în baza locală ca fallback
+                    $mesaj_aleph = $rezultat_aleph['mesaj'] ?? "Nu există această carte în baza de date Aleph";
+                    debug_log("Aleph nu a gasit cartea: " . $mesaj_aleph . " - cautare in baza locala...");
+                    
+                    // CAUTARE ÎN BAZA LOCALĂ (fallback pentru cărți casate din Aleph dar rămase în împrumut)
+                    $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
                     $stmt->execute([$cod_scanat]);
                     $carte = $stmt->fetch(PDO::FETCH_ASSOC);
-                    if ($carte && $verificaDateCorupte($carte)) {
-                        debug_log("Carte gasita dupa cota are date corupte - recautare in Aleph");
-                        $carte = null; // Forțează re-căutare în Aleph
+                    
+                    if ($carte) {
+                        // Cartea EXISTĂ în baza locală (probabil că a fost casată din Aleph dar rămâne în împrumut)
+                        debug_log("Carte gasita in baza locala (probabil casata din Aleph): " . ($carte['titlu'] ?? 'N/A'));
+                        
+                        // Folosește datele din baza locală
+                        $titlu = $carte['titlu'] ?? '';
+                        $autor = $carte['autor'] ?? '';
+                        $isbn = $carte['isbn'] ?? '';
+                        $cota = $carte['cota'] ?? '';
+                        $sectiune = $carte['sectiune'] ?? '';
+                        $barcode_final = $carte['cod_bare'];
+                        
+                        // Setăm flag-ul pentru a indica că cartea a fost găsită doar în baza locală
+                        $carte_gasita_doar_local = true;
+                        
+                        // NU setăm $aleph_eroare = true, pentru că am găsit cartea în baza locală
+                        // Continuăm cu procesarea normală
+                        $aleph_eroare = false;
+                        $tip_mesaj = null; // Resetăm tip_mesaj pentru a permite procesarea
+                        $mesaj = null; // Resetăm mesajul
+                        
+                        debug_log("Carte gasita in baza locala - continuare procesare normala");
+                    } else {
+                        // Cartea NU există nici în Aleph, nici în baza locală
+                        debug_log("Carte nu exista nici in Aleph, nici in baza locala");
+                        
+                        // Construiește mesajul pentru carte care NU există deloc
+                        $mesaj = "ℹ️ <strong>Informații carte:</strong><br><br>";
+                        $mesaj .= "📚 <strong>Titlu:</strong> Necunoscut<br>";
+                        $mesaj .= "📍 <strong>Cod de bare:</strong> " . htmlspecialchars($cod_scanat, ENT_QUOTES, 'UTF-8') . "<br>";
+                        $mesaj .= "<br>❌ <strong>Status:</strong> NU EXISTA IN BAZA DE DATE ALEPH ȘI NICI ÎN BAZA LOCALĂ<br>";
+                        $mesaj .= "<small>⚠️ Cartea nu a fost găsită nici în Aleph, nici în baza de date locală.</small>";
+                        $tip_mesaj = "danger";
+                        $aleph_eroare = true; // Setăm flag-ul explicit
+                        
+                        // Salvează codul pentru butonul de adăugare carte
+                        $_SESSION['carte_necunoscut'] = $cod_scanat;
+                        
+                        // IMPORTANT: Setăm explicit $carte = null pentru a preveni procesarea ulterioară
+                        $carte = null;
+                        
+                        // IMPORTANT: NU procesăm mai departe - sărim direct la salvare și redirect
+                        debug_log("Carte nu exista niciunde - stop procesare complet, aleph_eroare=true, carte=null");
                     }
-                }
-                
-                // Dacă nu există în baza locală SAU are date corupte, caută în Aleph
-                if (!$carte) {
-                    require_once 'aleph_api.php';
                     
-                    // Căutare automată cu fallback (BAR → LOC → WRD)
-                    $rezultat_aleph = cautaCarteInAleph($cod_scanat, 'AUTO');
+                } else {
+                    // Cartea EXISTĂ în Aleph - CONTINUĂ cu procesarea normală
+                    $date_carte = $rezultat_aleph['data'];
+                    $barcode_final = !empty($date_carte['barcode']) ? $date_carte['barcode'] : $cod_scanat;
+                    $cota_final = !empty($date_carte['cota']) ? $date_carte['cota'] : '';
                     
-                    if ($rezultat_aleph['success']) {
-                        $date_carte = $rezultat_aleph['data'];
-                        $barcode_final = !empty($date_carte['barcode']) ? $date_carte['barcode'] : $cod_scanat;
-                        $cota_final = !empty($date_carte['cota']) ? $date_carte['cota'] : '';
-                        
-                        // Verifică dacă cartea există deja (evită duplicate)
-                        $carte_existenta = null;
-                        if (!empty($barcode_final)) {
-                            $stmt_check = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
-                            $stmt_check->execute([$barcode_final]);
-                            $carte_existenta = $stmt_check->fetch(PDO::FETCH_ASSOC);
-                        }
-                        
-                        if (!$carte_existenta && !empty($cota_final)) {
-                            $stmt_check = $pdo->prepare("SELECT * FROM carti WHERE cota = ?");
-                            $stmt_check->execute([$cota_final]);
-                            $carte_existenta = $stmt_check->fetch(PDO::FETCH_ASSOC);
-                        }
-                        
-                        // Pregătește datele pentru salvare/actualizare
-                        $titlu = !empty($date_carte['titlu']) ? 
-                            (mb_check_encoding($date_carte['titlu'], 'UTF-8') ? 
-                                $date_carte['titlu'] : 
-                                mb_convert_encoding($date_carte['titlu'], 'UTF-8', 'ISO-8859-2')) : '';
-                        
-                        $autor = !empty($date_carte['autor']) ? 
-                            (mb_check_encoding($date_carte['autor'], 'UTF-8') ? 
-                                $date_carte['autor'] : 
-                                mb_convert_encoding($date_carte['autor'], 'UTF-8', 'ISO-8859-2')) : '';
-                        
-                        // Pentru câmpurile simple (isbn, cota, sectiune) folosim direct
-                        $isbn = !empty($date_carte['isbn']) ? $date_carte['isbn'] : '';
-                        $cota = !empty($date_carte['cota']) ? $date_carte['cota'] : '';
-                        $sectiune = !empty($date_carte['sectiune']) ? $date_carte['sectiune'] : '';
-                        
-                        if ($carte_existenta) {
-                            // Cartea există - verifică dacă are date corupte
-                            if ($verificaDateCorupte($carte_existenta)) {
-                                // Actualizează datele corupte cu cele corecte din Aleph
-                                debug_log("Actualizare date corupte pentru carte: " . $barcode_final);
-                                $stmt_update = $pdo->prepare("
-                                    UPDATE carti 
-                                    SET titlu = ?, autor = ?, isbn = ?, cota = ?, sectiune = ?
-                                    WHERE cod_bare = ?
-                                ");
-                                $stmt_update->execute([
-                                    $titlu,
-                                    $autor,
-                                    $isbn,
-                                    $cota,
-                                    $sectiune,
-                                    $barcode_final
-                                ]);
-                                
-                                // Re-încarcă cartea actualizată
-                                $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
-                                $stmt->execute([$barcode_final]);
-                                $carte = $stmt->fetch(PDO::FETCH_ASSOC);
-                            } else {
-                                // Datele sunt OK, folosește cartea existentă
-                                $carte = $carte_existenta;
-                            }
-                        } else {
-                            // Import nou - DOAR dacă există cititor activ
-                            // Dacă nu există cititor activ, NU salvăm cartea în baza de date
-                            if (isset($_SESSION['cititor_activ'])) {
-                                // Există cititor activ - salvează cartea în baza de date
-                                debug_log("Cititor activ exista - salvare carte in baza de date");
-                                
-                                // ✅ NOU - Extrage și convertește statutul din Aleph
-                                require_once 'functions_statute_carti.php';
-                                $status_aleph = $date_carte['status'] ?? '';
-                                $statut_carte = convertesteStatusAlephInCod($status_aleph);
-                                
-                                $stmt_import = $pdo->prepare("
-                                    INSERT INTO carti (cod_bare, titlu, autor, isbn, cota, sectiune, statut, data_adaugare)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-                                ");
-                                $stmt_import->execute([
-                                    $barcode_final,
-                                    $titlu,
-                                    $autor,
-                                    $isbn,
-                                    $cota,
-                                    $sectiune,
-                                    $statut_carte
-                                ]);
-                                
-                                // Re-încarcă cartea din DB
-                                $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
-                                $stmt->execute([$barcode_final]);
-                                $carte = $stmt->fetch(PDO::FETCH_ASSOC);
-                            } else {
-                                // NU există cititor activ - NU salvăm cartea în baza de date
-                                // Construim un array temporar cu datele cărții pentru afișare
-                                debug_log("NU exista cititor activ - NU salvam carte in baza de date, doar afisare");
-                                $carte = [
-                                    'cod_bare' => $barcode_final,
-                                    'titlu' => $titlu,
-                                    'autor' => $autor,
-                                    'isbn' => $isbn,
-                                    'cota' => $cota,
-                                    'sectiune' => $sectiune
-                                ];
-                            }
+                    // Caută cartea în baza locală - mai întâi după cod_bare, apoi după cotă
+                    $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
+                    $stmt->execute([$barcode_final]);
+                    $carte = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$carte && !empty($cota_final)) {
+                        $stmt = $pdo->prepare("SELECT * FROM carti WHERE cota = ?");
+                        $stmt->execute([$cota_final]);
+                        $carte = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                    
+                    // Pregătește datele pentru salvare/actualizare
+                    $titlu = !empty($date_carte['titlu']) ? 
+                        (mb_check_encoding($date_carte['titlu'], 'UTF-8') ? 
+                            $date_carte['titlu'] : 
+                            mb_convert_encoding($date_carte['titlu'], 'UTF-8', 'ISO-8859-2')) : '';
+                    
+                    $autor = !empty($date_carte['autor']) ? 
+                        (mb_check_encoding($date_carte['autor'], 'UTF-8') ? 
+                            $date_carte['autor'] : 
+                            mb_convert_encoding($date_carte['autor'], 'UTF-8', 'ISO-8859-2')) : '';
+                    
+                    $isbn = !empty($date_carte['isbn']) ? $date_carte['isbn'] : '';
+                    $cota = !empty($date_carte['cota']) ? $date_carte['cota'] : '';
+                    $sectiune = !empty($date_carte['sectiune']) ? $date_carte['sectiune'] : '';
+                    
+                    if ($carte) {
+                        // Cartea există în baza locală - verifică dacă are date corupte
+                        if ($verificaDateCorupte($carte)) {
+                            // Actualizează datele corupte cu cele corecte din Aleph
+                            debug_log("Actualizare date corupte pentru carte: " . $barcode_final);
+                            $stmt_update = $pdo->prepare("
+                                UPDATE carti 
+                                SET titlu = ?, autor = ?, isbn = ?, cota = ?, sectiune = ?
+                                WHERE cod_bare = ?
+                            ");
+                            $stmt_update->execute([
+                                $titlu,
+                                $autor,
+                                $isbn,
+                                $cota,
+                                $sectiune,
+                                $barcode_final
+                            ]);
+                            
+                            // Re-încarcă cartea actualizată
+                            $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
+                            $stmt->execute([$barcode_final]);
+                            $carte = $stmt->fetch(PDO::FETCH_ASSOC);
                         }
                     } else {
-                        // Aleph nu a găsit cartea - afișează mesaj clar
-                        $mesaj_aleph = $rezultat_aleph['mesaj'] ?? "Nu există această carte în baza de date Aleph";
-                        debug_log("Aleph nu a gasit cartea: " . $mesaj_aleph);
-                        
-                        // Verifică dacă mesajul este despre inexistență în Aleph
-                        if (stripos($mesaj_aleph, 'Nu există') !== false || 
-                            stripos($mesaj_aleph, 'nu există') !== false ||
-                            stripos($mesaj_aleph, 'baza de date Aleph') !== false) {
-                            $mesaj = "❌ <strong>" . htmlspecialchars($mesaj_aleph, ENT_QUOTES, 'UTF-8') . "</strong><br><br>";
-                            $mesaj .= "📚 <strong>Cod scanat:</strong> " . htmlspecialchars($cod_scanat, ENT_QUOTES, 'UTF-8') . "<br><br>";
-                            $mesaj .= "ℹ️ <em>Această carte nu poate fi adăugată la împrumuturi deoarece nu există în catalogul Aleph.</em>";
-                            $tip_mesaj = "danger";
+                        // Cartea nu există în baza locală - import nou DOAR dacă există cititor activ
+                        if (isset($_SESSION['cititor_activ'])) {
+                            // Există cititor activ - salvează cartea în baza de date
+                            debug_log("Cititor activ exista - salvare carte in baza de date");
                             
-                            // NU salvează codul pentru adăugare - cartea nu există în Aleph
-                            // Nu setează $_SESSION['carte_necunoscut'] pentru că nu vrem să permită adăugarea
+                            require_once 'functions_statute_carti.php';
+                            $status_aleph = $date_carte['status'] ?? '';
+                            $statut_carte = convertesteStatusAlephInCod($status_aleph);
+                            
+                            $stmt_import = $pdo->prepare("
+                                INSERT INTO carti (cod_bare, titlu, autor, isbn, cota, sectiune, statut, data_adaugare)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                            ");
+                            $stmt_import->execute([
+                                $barcode_final,
+                                $titlu,
+                                $autor,
+                                $isbn,
+                                $cota,
+                                $sectiune,
+                                $statut_carte
+                            ]);
+                            
+                            // Re-încarcă cartea din DB
+                            $stmt = $pdo->prepare("SELECT * FROM carti WHERE cod_bare = ?");
+                            $stmt->execute([$barcode_final]);
+                            $carte = $stmt->fetch(PDO::FETCH_ASSOC);
                         } else {
-                            // Alt tip de eroare
-                            $mesaj = "⚠️ <strong>Eroare la căutare în Aleph:</strong><br>" . htmlspecialchars($mesaj_aleph, ENT_QUOTES, 'UTF-8');
-                            $tip_mesaj = "warning";
+                            // NU există cititor activ - NU salvăm cartea în baza de date
+                            // Construim un array temporar cu datele cărții pentru afișare
+                            debug_log("NU exista cititor activ - NU salvam carte in baza de date, doar afisare");
+                            $carte = [
+                                'cod_bare' => $barcode_final,
+                                'titlu' => $titlu,
+                                'autor' => $autor,
+                                'isbn' => $isbn,
+                                'cota' => $cota,
+                                'sectiune' => $sectiune
+                            ];
                         }
                     }
                 }
                 
-                if ($carte) {
+                // ACUM procesează cartea - DOAR dacă $carte este setat ȘI nu avem eroare Aleph
+                // Dacă Aleph nu a găsit cartea, $aleph_eroare va fi true și $carte va fi null
+                // Verificăm explicit flag-ul de eroare ÎNAINTE de a procesa cartea
+                if ($aleph_eroare || (isset($tip_mesaj) && $tip_mesaj === 'danger')) {
+                    // Există deja mesaj de eroare Aleph - NU procesăm cartea DELOC
+                    debug_log("Mesaj eroare Aleph detectat (aleph_eroare=" . ($aleph_eroare ? 'true' : 'false') . ", tip_mesaj=" . ($tip_mesaj ?? 'null') . ") - skip procesare carte complet");
+                    // NU facem nimic - mesajul este deja setat și va fi afișat
+                    // SĂRIM COMPLET peste toată procesarea cărții
+                } elseif (isset($carte) && $carte && is_array($carte) && !empty($carte)) {
                     debug_log("Carte procesata: " . substr($carte['titlu'] ?? 'N/A', 0, 50));
                     // Verifică dacă există cititor activ
                     if (isset($_SESSION['cititor_activ'])) {
@@ -495,24 +536,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ");
                             $update_stmt->execute([$cod_carte_db, $cod_cititor]);
                             
-                                    // Recalculează numărul de cărți împrumutate din baza de date (după UPDATE)
-                                    $stmt_count_after_return = $pdo->prepare("SELECT COUNT(*) FROM imprumuturi WHERE cod_cititor = ? AND data_returnare IS NULL");
-                                    $stmt_count_after_return->execute([$cod_cititor]);
-                                    $numar_carti_dupa_returnare = (int)$stmt_count_after_return->fetchColumn();
-                                    
-                                    // Recalculează verificarea limitelor
-                                    require_once 'functions_statute.php';
-                                    $verificare_after_return = poateImprumuta($pdo, $cod_cititor, $numar_carti_dupa_returnare);
-                                    
-                                    // Actualizează numărul de cărți împrumutate în sesiune
-                                    if (isset($_SESSION['cititor_activ'])) {
-                                        $_SESSION['cititor_activ']['numar_carti_imprumutate'] = $numar_carti_dupa_returnare;
-                                        $_SESSION['cititor_activ']['limita'] = $verificare_after_return['limita'];
-                                    }
-                                    
-                                    $mesaj = "✅ Cartea a fost returnată cu succes!\n" .
-                                    "📕 {$carte['titlu']}\n" .
-                                    "👤 {$_SESSION['cititor_activ']['nume']} {$_SESSION['cititor_activ']['prenume']}";
+                            // Recalculează numărul de cărți împrumutate din baza de date (după UPDATE)
+                            $stmt_count_after_return = $pdo->prepare("SELECT COUNT(*) FROM imprumuturi WHERE cod_cititor = ? AND data_returnare IS NULL");
+                            $stmt_count_after_return->execute([$cod_cititor]);
+                            $numar_carti_dupa_returnare = (int)$stmt_count_after_return->fetchColumn();
+                            
+                            // Recalculează verificarea limitelor
+                            require_once 'functions_statute.php';
+                            $verificare_after_return = poateImprumuta($pdo, $cod_cititor, $numar_carti_dupa_returnare);
+                            
+                            // Actualizează numărul de cărți împrumutate în sesiune
+                            if (isset($_SESSION['cititor_activ'])) {
+                                $_SESSION['cititor_activ']['numar_carti_imprumutate'] = $numar_carti_dupa_returnare;
+                                $_SESSION['cititor_activ']['limita'] = $verificare_after_return['limita'];
+                            }
+                            
+                            $mesaj = "✅ Cartea a fost returnată cu succes!\n" .
+                            "📕 {$carte['titlu']}\n" .
+                            "👤 {$_SESSION['cititor_activ']['nume']} {$_SESSION['cititor_activ']['prenume']}";
                             $tip_mesaj = "success";
                             debug_log("Mesaj returnare creat: " . substr($mesaj, 0, 50));
                             
@@ -628,22 +669,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         }
                     } else {
-                        // Nu există cititor activ - verifică statusul cărții și afișează informații
-                        debug_log("Nu exista cititor activ - afisare info carte");
+                        // Nu există cititor activ - afișează informații carte
+                        // DAR DOAR dacă nu există deja mesaj de eroare de la Aleph
+                        // Verificăm explicit flag-ul de eroare ÎNAINTE de a afișa informații
+                        if (!$aleph_eroare && (!isset($tip_mesaj) || $tip_mesaj !== 'danger')) {
+                            debug_log("Nu exista cititor activ - afisare info carte");
                         
-                        // Verifică dacă cartea este împrumutată
+                        // Verifică dacă cartea este împrumutată și obține ID-ul împrumutului activ
                         $stmt_verif = $pdo->prepare("
-                            SELECT COUNT(*) as total 
+                            SELECT id 
                             FROM imprumuturi 
                             WHERE cod_carte = ? 
                             AND data_returnare IS NULL
+                            ORDER BY data_imprumut DESC
+                            LIMIT 1
                         ");
                         $stmt_verif->execute([$carte['cod_bare']]);
-                        $este_imprumutata = $stmt_verif->fetchColumn() > 0;
+                        $imprumut_id = $stmt_verif->fetchColumn();
+                        $este_imprumutata = (bool)$imprumut_id;
+                        
+                        // Pregătește titlul - fă-l clicabil dacă există împrumut activ
+                        $titlu_carte = htmlspecialchars($carte['titlu'], ENT_QUOTES, 'UTF-8');
+                        if ($este_imprumutata && $imprumut_id) {
+                            $titlu_link = "<a href='editare_imprumut.php?id=" . (int)$imprumut_id . "' style='color: #667eea; text-decoration: underline; transition: opacity 0.3s;' onmouseover='this.style.opacity=\"0.7\"' onmouseout='this.style.opacity=\"1\"'>" . $titlu_carte . "</a>";
+                        } else {
+                            $titlu_link = $titlu_carte;
+                        }
                         
                         // Mesaj elegant cu toate informațiile
                         $mesaj = "ℹ️ <strong>Informații carte:</strong><br><br>";
-                        $mesaj .= "📚 <strong>Titlu:</strong> " . htmlspecialchars($carte['titlu'], ENT_QUOTES, 'UTF-8') . "<br>";
+                        
+                        // Adaugă mesaj informativ dacă cartea a fost găsită doar în baza locală (nu în Aleph)
+                        if ($carte_gasita_doar_local) {
+                            $mesaj .= "⚠️ <strong>Notă:</strong> Cartea a fost găsită doar în baza de date locală (nu în Aleph).<br>";
+                            $mesaj .= "<small style='color: #856404;'>Probabil că a fost casată din Aleph, dar rămâne în împrumut.</small><br><br>";
+                        }
+                        
+                        $mesaj .= "📚 <strong>Titlu:</strong> " . $titlu_link . "<br>";
                         
                         if (!empty($carte['autor'])) {
                             $mesaj .= "👤 <strong>Autor:</strong> " . htmlspecialchars($carte['autor'], ENT_QUOTES, 'UTF-8') . "<br>";
@@ -652,7 +714,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $mesaj .= "📍 <strong>Cod de bare:</strong> " . htmlspecialchars($carte['cod_bare'], ENT_QUOTES, 'UTF-8') . "<br>";
                         
                         if (!empty($carte['cota'])) {
-                            $mesaj .= "🔖 <strong>Cotă:</strong> " . htmlspecialchars($carte['cota'], ENT_QUOTES, 'UTF-8') . "<br>";
+                            $mesaj .= "📖 <strong>Cotă:</strong> " . htmlspecialchars($carte['cota'], ENT_QUOTES, 'UTF-8') . "<br>";
                         }
                         
                         // Status și instrucțiuni
@@ -669,17 +731,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $tip_mesaj = "info";
                         debug_log("Afisare info carte - Status: " . ($este_imprumutata ? "Imprumutata" : "Disponibila"));
                         
-                        // NU salvăm cartea în sesiune când nu există cititor
-                        // Cartea scanată se va afișa doar în mesaj, nu ca box separat
-                        unset($_SESSION['carte_scanata']);
-                        unset($_SESSION['carte_scanata_pentru_anulare']);
+                            // NU salvăm cartea în sesiune când nu există cititor
+                            // Cartea scanată se va afișa doar în mesaj, nu ca box separat
+                            unset($_SESSION['carte_scanata']);
+                            unset($_SESSION['carte_scanata_pentru_anulare']);
+                        } // <- închide if-ul de verificare mesaj eroare
                     }
-                } else {
-                    debug_log("Carte NU gasita nici in baza locala, nici in Aleph");
-                    $mesaj = "❌ Cod de bare/cotă necunoscut: $cod_scanat<br>Nu există în baza locală și nici în Aleph!";
-                    $tip_mesaj = "danger";
-                    // Salvează codul în sesiune pentru butonul de adăugare carte
-                    $_SESSION['carte_necunoscut'] = $cod_scanat;
                 }
             }
         } catch (PDOException $e) {
@@ -1324,6 +1381,47 @@ $carti_imprumutate = $pdo->query("SELECT COUNT(*) FROM imprumuturi WHERE data_re
     display: none;
 }
 
+.app-footer {
+    text-align: right;
+    padding: 30px 40px;
+    margin-top: 40px;
+    background: transparent;
+}
+
+.app-footer p {
+    display: inline-block;
+    margin: 0;
+    padding: 13px 26px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(13px);
+    border-radius: 22px;
+    color: white;
+    font-weight: 400;
+    font-size: 0.9em;
+    box-shadow: 0 0 18px rgba(196, 181, 253, 0.15),
+                0 4px 16px rgba(0, 0, 0, 0.1),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    transition: all 0.45s ease;
+    position: relative;
+}
+
+.app-footer p::before {
+    content: '💡';
+    margin-right: 10px;
+    font-size: 1.15em;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+}
+
+.app-footer p:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+    box-shadow: 0 0 35px rgba(196, 181, 253, 0.3),
+                0 8px 24px rgba(0, 0, 0, 0.15),
+                inset 0 1px 1px rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px) scale(1.01);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
     </style>
 </head>
 <body>
@@ -1357,7 +1455,7 @@ $carti_imprumutate = $pdo->query("SELECT COUNT(*) FROM imprumuturi WHERE data_re
     <a href="adauga_cititor.php">👤 Adaugă cititor</a>
     <a href="repara_date_corupte.php" class="nav-link-sync">🔄 Sincronizare cu Aleph</a>
     <a href="cauta_cod.php" class="nav-link-sync">🔍 Caută COD</a>
-    <a href="#" class="nav-link-sync" onclick="event.preventDefault(); deschideModalAdmin(); return false;">👤 Gestionare Utilizatori</a>
+    <a href="#" class="nav-link-sync" onclick="event.preventDefault(); deschideModalAdmin(); return false;">👤 Gestionare Admini</a>
 </div>
 
         </div>
@@ -1393,11 +1491,31 @@ $carti_imprumutate = $pdo->query("SELECT COUNT(*) FROM imprumuturi WHERE data_re
             <?php endif; ?>
 
             <!-- Carte scanată (DOAR când există cititor activ ȘI cartea a fost procesată) -->
-            <?php if (isset($_SESSION['carte_scanata']) && isset($_SESSION['cititor_activ']) && (!isset($mesaj) || $tip_mesaj !== 'success')): ?>
+            <?php if (isset($_SESSION['carte_scanata']) && isset($_SESSION['cititor_activ']) && (!isset($mesaj) || $tip_mesaj !== 'success')): 
+                // Obține ID-ul împrumutului activ pentru această carte și cititor
+                $stmt_imprumut_box = $pdo->prepare("
+                    SELECT id 
+                    FROM imprumuturi 
+                    WHERE cod_carte = ? 
+                    AND cod_cititor = ?
+                    AND data_returnare IS NULL
+                    ORDER BY data_imprumut DESC
+                    LIMIT 1
+                ");
+                $stmt_imprumut_box->execute([$_SESSION['carte_scanata']['cod_bare'], $_SESSION['cititor_activ']['cod_bare']]);
+                $imprumut_id_box = $stmt_imprumut_box->fetchColumn();
+                
+                $titlu_carte_box = htmlspecialchars($_SESSION['carte_scanata']['titlu'], ENT_QUOTES, 'UTF-8');
+                if ($imprumut_id_box) {
+                    $titlu_link_box = "<a href='editare_imprumut.php?id=" . (int)$imprumut_id_box . "' style='color: white; text-decoration: underline; transition: opacity 0.3s;' onmouseover='this.style.opacity=\"0.8\"' onmouseout='this.style.opacity=\"1\"'>" . $titlu_carte_box . "</a>";
+                } else {
+                    $titlu_link_box = $titlu_carte_box;
+                }
+            ?>
                 <div class="carte-scanata" id="carte-scanata-box">
                     <button class="btn-close-carte" onclick="anuleazaCarte()" title="Anulează operațiunea">✕</button>
                     <div class="carte-info">
-                        <h3>📚 Cartea scanată: <?php echo htmlspecialchars($_SESSION['carte_scanata']['titlu'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                        <h3>📚 Cartea scanată: <?php echo $titlu_link_box; ?></h3>
                         <?php if (!empty($_SESSION['carte_scanata']['autor'])): ?>
                             <p>👤 Autor: <?php echo htmlspecialchars($_SESSION['carte_scanata']['autor'], ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php endif; ?>
@@ -1407,22 +1525,63 @@ $carti_imprumutate = $pdo->query("SELECT COUNT(*) FROM imprumuturi WHERE data_re
             <?php endif; ?>
 
             <!-- Cititor activ (cu buton X separat) -->
-            <?php if (isset($_SESSION['cititor_activ'])): ?>
+            <?php if (isset($_SESSION['cititor_activ'])): 
+                // IMPORTANT: Recalculează numărul de cărți împrumutate din baza de date pentru a fi sigur că este actualizat
+                $cod_cititor_activ = $_SESSION['cititor_activ']['cod_bare'];
+                $stmt_recalc_carti = $pdo->prepare("SELECT COUNT(*) FROM imprumuturi WHERE cod_cititor = ? AND data_returnare IS NULL");
+                $stmt_recalc_carti->execute([$cod_cititor_activ]);
+                $numar_carti_recalc = (int)$stmt_recalc_carti->fetchColumn();
+                
+                // Actualizează numărul în sesiune dacă este diferit
+                if (isset($_SESSION['cititor_activ']['numar_carti_imprumutate']) && 
+                    $_SESSION['cititor_activ']['numar_carti_imprumutate'] != $numar_carti_recalc) {
+                    $_SESSION['cititor_activ']['numar_carti_imprumutate'] = $numar_carti_recalc;
+                } elseif (!isset($_SESSION['cititor_activ']['numar_carti_imprumutate'])) {
+                    $_SESSION['cititor_activ']['numar_carti_imprumutate'] = $numar_carti_recalc;
+                }
+                
+                // Obține ID-ul cititorului pentru link către profil
+                $stmt_cititor_id = $pdo->prepare("SELECT id FROM cititori WHERE cod_bare = ?");
+                $stmt_cititor_id->execute([$_SESSION['cititor_activ']['cod_bare']]);
+                $cititor_id = $stmt_cititor_id->fetchColumn();
+                $nume_complet = htmlspecialchars($_SESSION['cititor_activ']['nume'] . ' ' . $_SESSION['cititor_activ']['prenume'], ENT_QUOTES, 'UTF-8');
+            ?>
                 <div class="cititor-activ" id="cititor-activ-box">
                     <button class="btn-close-cititor" onclick="reseteazaCititor()" title="Închide fereastra (împrumuturile rămân salvate)">✕</button>
                     <div class="cititor-info">
-                        <h2>👤 Cititor activ: <?php echo htmlspecialchars($_SESSION['cititor_activ']['nume'] . ' ' . $_SESSION['cititor_activ']['prenume'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                        <h2>👤 Cititor activ: <?php if ($cititor_id): ?><a href="editare_cititor.php?id=<?php echo (int)$cititor_id; ?>" style="color: white; text-decoration: underline; transition: opacity 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><?php echo $nume_complet; ?></a><?php else: ?><?php echo $nume_complet; ?><?php endif; ?></h2>
                         <p>Cod: <?php echo htmlspecialchars($_SESSION['cititor_activ']['cod_bare'], ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php if (isset($_SESSION['cititor_activ']['nume_statut'])): ?>
                             <p style="font-size: 1em; margin-top: 5px; opacity: 0.95;">
                                 🏷️ <strong>Statut:</strong> <?php echo htmlspecialchars($_SESSION['cititor_activ']['nume_statut'], ENT_QUOTES, 'UTF-8'); ?>
                             </p>
                         <?php endif; ?>
-                        <?php if (isset($_SESSION['cititor_activ']['numar_carti_imprumutate'])): 
-                            $numar_carti = (int)$_SESSION['cititor_activ']['numar_carti_imprumutate'];
+                        <?php 
+                            // Folosește numărul recalculat (care este deja actualizat în sesiune)
+                            $numar_carti = isset($_SESSION['cititor_activ']['numar_carti_imprumutate']) ? 
+                                (int)$_SESSION['cititor_activ']['numar_carti_imprumutate'] : 
+                                (isset($numar_carti_recalc) ? $numar_carti_recalc : 0);
                             $limita = isset($_SESSION['cititor_activ']['limita']) ? (int)$_SESSION['cititor_activ']['limita'] : 6;
                             $e_la_maxim = $numar_carti >= $limita;
                             $culoare = $e_la_maxim ? 'color: #dc3545; font-weight: bold;' : '';
+                            
+                            // Obține lista cărților împrumutate de cititorul activ
+                            $stmt_carti_imprumutate = $pdo->prepare("
+                                SELECT 
+                                    i.id as imprumut_id,
+                                    c.titlu,
+                                    c.autor,
+                                    i.data_imprumut
+                                FROM imprumuturi i
+                                JOIN carti c ON i.cod_carte = c.cod_bare
+                                WHERE i.cod_cititor = ? 
+                                AND i.data_returnare IS NULL
+                                ORDER BY i.data_imprumut DESC
+                            ");
+                            $stmt_carti_imprumutate->execute([$_SESSION['cititor_activ']['cod_bare']]);
+                            $carti_imprumutate = $stmt_carti_imprumutate->fetchAll(PDO::FETCH_ASSOC);
+                            
+                            if ($numar_carti > 0 || !empty($carti_imprumutate)):
                         ?>
                             <p style="font-size: 1.1em; margin-top: 8px; <?php echo $culoare; ?>">
                                 📚 <strong><?php echo $numar_carti; ?> 
@@ -1436,6 +1595,24 @@ $carti_imprumutate = $pdo->query("SELECT COUNT(*) FROM imprumuturi WHERE data_re
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </p>
+                            
+                            <?php if (!empty($carti_imprumutate)): ?>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.3);">
+                                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 1.05em;">
+                                        <?php foreach ($carti_imprumutate as $carte_imprumutata): 
+                                            $titlu_carte = htmlspecialchars($carte_imprumutata['titlu'], ENT_QUOTES, 'UTF-8');
+                                            $imprumut_id = (int)$carte_imprumutata['imprumut_id'];
+                                            // Face titlul clickable către editare_imprumut.php cu culoare albastră
+                                            $titlu_link = "<a href='editare_imprumut.php?id={$imprumut_id}' style='color: #f5945c; font-weight: 500; text-decoration: underline; transition: opacity 0.3s;' onmouseover='this.style.opacity=\"0.7\"' onmouseout='this.style.opacity=\"1\"'>{$titlu_carte}</a>";
+                                        ?>
+                                            <li style="margin-bottom: 8px; padding-left: 20px; position: relative;">
+                                                <span style="position: absolute; left: 0;">📖</span>
+                                                <?php echo $titlu_link; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1847,6 +2024,11 @@ $carti_imprumutate = $pdo->query("SELECT COUNT(*) FROM imprumuturi WHERE data_re
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="app-footer">
+        <p>Dezvoltare web: Neculai Ioan Fantanaru</p>
     </div>
 </body>
 </html>

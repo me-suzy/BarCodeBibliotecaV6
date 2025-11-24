@@ -5,7 +5,7 @@
 require_once 'config.php';
 
 // Configurare email
-define('EMAIL_FROM', 'YOUR-USER@gmail.com');
+define('EMAIL_FROM', 'YOUR-MAIL@gmail.com');
 define('EMAIL_PASSWORD', '<{[8_42Nw)(L(');
 define('EMAIL_SMTP_HOST', 'smtp.gmail.com');
 define('EMAIL_SMTP_PORT', 587);

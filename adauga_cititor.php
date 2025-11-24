@@ -45,6 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($tip_cod === 'user') {
             // Format USER - nu are statut
             $statut = null;
+        } elseif ($tip_cod === 'biblioteca_academiei') {
+            // Format Biblioteca Academiei (14016xxx) - nu are statut
+            $statut = null;
         }
         
         // Inserează cititorul cu tip_cod și statut (dacă există câmpurile)
@@ -334,6 +337,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 5px;
             letter-spacing: 2px;
         }
+
+        .app-footer {
+            text-align: right;
+            padding: 30px 40px;
+            margin-top: 40px;
+            background: transparent;
+        }
+
+        .app-footer p {
+            display: inline-block;
+            margin: 0;
+            padding: 13px 26px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(13px);
+            border-radius: 22px;
+            color: white;
+            font-weight: 400;
+            font-size: 0.9em;
+            box-shadow: 0 0 18px rgba(196, 181, 253, 0.15),
+                        0 4px 16px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.45s ease;
+            position: relative;
+        }
+
+        .app-footer p::before {
+            content: '💡';
+            margin-right: 10px;
+            font-size: 1.15em;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+        }
+
+        .app-footer p:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+            box-shadow: 0 0 35px rgba(196, 181, 253, 0.3),
+                        0 8px 24px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -350,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="info-box">
             <h3>💡 Informații utile</h3>
             <ul style="margin-left: 20px;">
-                <li>Codul de bare trebuie să fie unic (ex: USER001, USER002)</li>
+                <li>Codul de bare trebuie să fie unic (ex: USER001, 14016xxx, 12 cifre Aleph)</li>
                 <li>Va fi printat pe carnetul de membru al cititorului</li>
                 <li>Contactele sunt importante pentru notificări</li>
             </ul>
@@ -381,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        <?php echo (!empty($cod_prestabilit) && !$cod_duplicat) ? 'readonly style="background:#e9ecef;"' : ''; ?>>
                 
                 <small id="cod_info" style="display: block; margin-top: 5px; color: #666; font-size: 0.9em;">
-                    💡 Formate acceptate: USER001 (testare) sau 12 cifre (Aleph)
+                    💡 Formate acceptate: USER001 (testare), 14016xxx (Biblioteca Academiei) sau 12 cifre (Aleph)
                 </small>
                 
                 <?php if (!empty($cod_prestabilit) && !$cod_duplicat): ?>
@@ -471,8 +515,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
-        <a href="index.php" class="home-link">🔙 Înapoi la scanare</a>
+		<a href="index.php" class="home-link">🔙 Înapoi la scanare</a>
         <a href="cititori.php" class="back-link">👥 Vezi toți cititorii</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="app-footer">
+        <p>Dezvoltare web: Neculai Ioan Fantanaru</p>
+    </div>
     </div>
 
     <script>
@@ -553,6 +603,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if (statutGroup) statutGroup.style.display = 'block';
                 }
+                // Verifică format Biblioteca Academiei (14016xxx - 8 cifre)
+                else if (/^14016\d{3}$/.test(cod)) {
+                    codInfo.innerHTML = '✅ Format Biblioteca Academiei detectat (14016xxx)';
+                    codInfo.style.color = '#28a745';
+                    if (statutGroup) statutGroup.style.display = 'none';
+                }
                 // Verifică format USER
                 else if (/^USER\d+$/i.test(cod)) {
                     codInfo.innerHTML = '✅ Format USER detectat (pentru testare)';
@@ -561,13 +617,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 // Cod invalid sau incomplet
                 else if (cod.length > 0) {
-                    codInfo.innerHTML = '⚠️ Format necunoscut. Formate acceptate: USER001 sau 12 cifre (Aleph)';
+                    codInfo.innerHTML = '⚠️ Format necunoscut. Formate acceptate: USER001, 14016xxx (Biblioteca Academiei) sau 12 cifre (Aleph)';
                     codInfo.style.color = '#ffc107';
                     if (statutGroup) statutGroup.style.display = 'none';
                 }
                 // Câmp gol
                 else {
-                    codInfo.innerHTML = '💡 Formate acceptate: USER001 (testare) sau 12 cifre (Aleph)';
+                    codInfo.innerHTML = '💡 Formate acceptate: USER001 (testare), 14016xxx (Biblioteca Academiei) sau 12 cifre (Aleph)';
                     codInfo.style.color = '#666';
                     if (statutGroup) statutGroup.style.display = 'none';
                 }

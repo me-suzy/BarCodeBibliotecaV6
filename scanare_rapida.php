@@ -13,9 +13,9 @@ require_once 'functions_email_templates.php';
 $config_email = [
     'smtp_host' => 'smtp.gmail.com',
     'smtp_port' => 587,
-    'smtp_user' => 'YOUR-USER@gmail.com',
-    'smtp_pass' => 'xxxx xxxx xxxx xxxx',
-    'from_email' => 'YOUR-USER@gmail.com',
+    'smtp_user' => 'YOUR-MAIL@gmail.com',
+    'smtp_pass' => 'GOOGLE SECRET PASSWORD',
+    'from_email' => 'YOUR-MAIL@gmail.com',
     'from_name' => 'Biblioteca Academiei Române - Iași'
 ];
 

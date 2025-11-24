@@ -56,7 +56,7 @@ Scriptul oferă un meniu interactiv cu următoarele opțiuni:
 ### Modificare credențiale:
 Editează variabilele din `ssh_client.py`:
 ```python
-SERVER_IP = "83.146.133.42"
+SERVER_IP = "65.176.121.45"
 SSH_PORT = 22
 SSH_USER = "root"
 SSH_PASS = "YOUR-PASSWORD"
@@ -117,7 +117,7 @@ pip install paramiko
 
 ### Eroare: "Connection timeout"
 **Soluție:** 
-- Verifică dacă serverul este accesibil: `ping 83.146.133.42`
+- Verifică dacă serverul este accesibil: `ping 65.176.121.45`
 - Verifică firewall-ul
 - Verifică dacă portul SSH (22) este deschis
 
@@ -134,7 +134,7 @@ Pentru mai multe informații despre paramiko:
 
 Dacă preferi să folosești SSH direct în loc de script:
 ```bash
-ssh root@83.146.133.42
+ssh root@65.176.121.45
 ```
 
 **Sau cu opțiuni:**
@@ -143,7 +143,7 @@ ssh -o StrictHostKeyChecking=no \
     -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 \
     -o HostKeyAlgorithms=+ssh-rsa \
     -o MACs=+hmac-sha1 \
-    root@83.146.133.42
+    root@65.176.121.45
 ```
 
 ## ✅ Avantaje față de PuTTY

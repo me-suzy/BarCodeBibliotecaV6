@@ -15,7 +15,7 @@ ssh -o StrictHostKeyChecking=no \
     -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 \
     -o HostKeyAlgorithms=+ssh-rsa \
     -o MACs=+hmac-sha1 \
-    root@83.146.133.42
+    root@65.176.121.45
 ```
 
 Parolă: YOUR-PASSWORD
@@ -42,7 +42,7 @@ mysql -u root -e "SHOW VARIABLES LIKE 'datadir';"
 ## Opțiunea 3: Folosește PuTTY (Windows)
 
 1. Deschide PuTTY
-2. Host: 83.146.133.42
+2. Host: 65.176.121.45
 3. Port: 22
 4. Connection type: SSH
 5. Click "Open"

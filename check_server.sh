@@ -2,7 +2,7 @@
 # Script pentru verificare server Linux
 # Rulare: bash check_server.sh sau ./check_server.sh
 
-SERVER="root@83.146.133.42"
+SERVER="root@65.176.121.45"
 PASSWORD="YOUR-PASSWORD"
 
 echo "=== Conectare la server Linux ==="

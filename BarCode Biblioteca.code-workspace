@@ -3,5 +3,8 @@
         {
             "path": "."
         }
-    ]
+    ],
+    "settings": {
+        "php.validate.executablePath": "always"
+    }
 }

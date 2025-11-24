@@ -7,9 +7,9 @@ require_once 'send_email.php';
 $config_email = [
     'smtp_host' => 'smtp.gmail.com',
     'smtp_port' => 587,
-    'smtp_user' => 'YOUR-USER@gmail.com', // Email pentru notificări
-    'smtp_pass' => 'xxxx xxxx xxxx xxxx',       // Parolă aplicație Gmail (fără spații)
-    'from_email' => 'YOUR-USER@gmail.com',
+    'smtp_user' => 'YOUR-MAIL@gmail.com', // Email pentru notificări
+    'smtp_pass' => 'GOOGLE SECRET PASSWORD',       // Parolă aplicație Gmail (fără spații)
+    'from_email' => 'YOUR-MAIL@gmail.com',
     'from_name' => 'Biblioteca Academiei Române - Iași'
 ];
 
@@ -326,6 +326,47 @@ try {
             display: block;
             margin: 10px 0;
         }
+
+        .app-footer {
+            text-align: right;
+            padding: 30px 40px;
+            margin-top: 40px;
+            background: transparent;
+        }
+
+        .app-footer p {
+            display: inline-block;
+            margin: 0;
+            padding: 13px 26px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(13px);
+            border-radius: 22px;
+            color: white;
+            font-weight: 400;
+            font-size: 0.9em;
+            box-shadow: 0 0 18px rgba(196, 181, 253, 0.15),
+                        0 4px 16px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.45s ease;
+            position: relative;
+        }
+
+        .app-footer p::before {
+            content: '💡';
+            margin-right: 10px;
+            font-size: 1.15em;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+        }
+
+        .app-footer p:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+            box-shadow: 0 0 35px rgba(196, 181, 253, 0.3),
+                        0 8px 24px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -544,6 +585,11 @@ try {
             <?php else: ?>
                 <p style="text-align: center; padding: 40px; color: #999;">Nu există notificări trimise încă.</p>
             <?php endif; ?>
+        </div>
+
+        <!-- Footer -->
+        <div class="app-footer">
+            <p>Dezvoltare web: Neculai Ioan Fantanaru</p>
         </div>
     </div>
 </body>

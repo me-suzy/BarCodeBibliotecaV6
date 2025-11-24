@@ -1,6 +1,6 @@
 # Script PowerShell pentru verificare server Linux
 $password = "YOUR-PASSWORD"
-$server = "root@83.146.133.42"
+$server = "root@65.176.121.45"
 
 # Creează comanda SSH cu parola
 $sshCommand = @"
@@ -20,6 +20,6 @@ if (Get-Command plink -ErrorAction SilentlyContinue) {
 } else {
     Write-Host "Plink (PuTTY) nu este instalat. Instalează PuTTY sau folosește WSL/Git Bash cu sshpass."
     Write-Host "Comanda manuală:"
-    Write-Host "ssh -o StrictHostKeyChecking=no -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 -o HostKeyAlgorithms=+ssh-rsa -o MACs=+hmac-sha1 root@83.146.133.42"
+    Write-Host "ssh -o StrictHostKeyChecking=no -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 -o HostKeyAlgorithms=+ssh-rsa -o MACs=+hmac-sha1 root@65.176.121.45"
 }
 

@@ -4,21 +4,21 @@
 
 ### URL Aplicație
 ```
-http://83.146.133.42/biblioteca/
+http://65.176.121.45/biblioteca/
 ```
 
 **Sau:**
 ```
-http://83.146.133.42/biblioteca/index.php
+http://65.176.121.45/biblioteca/index.php
 ```
 
 ### Pagini principale:
-- **Index/Pagina principală:** `http://83.146.133.42/biblioteca/`
-- **Scanare rapidă:** `http://83.146.133.42/biblioteca/scanare_rapida.php`
-- **Împrumuturi:** `http://83.146.133.42/biblioteca/imprumuturi.php`
-- **Rapoarte:** `http://83.146.133.42/biblioteca/rapoarte.php`
-- **Cărți:** `http://83.146.133.42/biblioteca/carti.php`
-- **Cititori:** `http://83.146.133.42/biblioteca/cititori.php`
+- **Index/Pagina principală:** `http://65.176.121.45/biblioteca/`
+- **Scanare rapidă:** `http://65.176.121.45/biblioteca/scanare_rapida.php`
+- **Împrumuturi:** `http://65.176.121.45/biblioteca/imprumuturi.php`
+- **Rapoarte:** `http://65.176.121.45/biblioteca/rapoarte.php`
+- **Cărți:** `http://65.176.121.45/biblioteca/carti.php`
+- **Cititori:** `http://65.176.121.45/biblioteca/cititori.php`
 
 ## 💾 Baza de Date
 
@@ -47,7 +47,7 @@ mysql -u root -p biblioteca
 **NU este recomandat** să expui MySQL direct pe internet pentru securitate!
 
 Dacă este necesar (doar pentru administrare):
-- **Host:** `83.146.133.42`
+- **Host:** `65.176.121.45`
 - **Port:** `3306` (trebuie deschis în firewall)
 - **User:** `root` sau utilizator dedicat
 - **Parolă:** (vezi configurația)
@@ -58,7 +58,7 @@ Dacă este necesar (doar pentru administrare):
 
 ### Conectare SSH:
 ```bash
-ssh root@83.146.133.42
+ssh root@65.176.121.45
 ```
 
 **Sau cu opțiuni pentru compatibilitate:**
@@ -67,7 +67,7 @@ ssh -o StrictHostKeyChecking=no \
     -o KexAlgorithms=+diffie-hellman-group-exchange-sha1 \
     -o HostKeyAlgorithms=+ssh-rsa \
     -o MACs=+hmac-sha1 \
-    root@83.146.133.42
+    root@65.176.121.45
 ```
 
 ### Credențiale:
@@ -131,7 +131,7 @@ python ssh_client.py
 ## 📊 Statistici
 
 ### Verificare statistici din aplicație:
-Accesează: `http://83.146.133.42/biblioteca/rapoarte.php`
+Accesează: `http://65.176.121.45/biblioteca/rapoarte.php`
 
 ### Verificare din linia de comandă:
 ```bash
@@ -158,10 +158,10 @@ SELECT
 **Când te conectezi la baza de date:**
 - **Local (pe server):** `localhost` sau `127.0.0.1`
 - **Din aplicație PHP:** `localhost` (din `config.php`)
-- **Din aplicații externe:** `83.146.133.42` (NU recomandat pentru securitate!)
+- **Din aplicații externe:** `65.176.121.45` (NU recomandat pentru securitate!)
 
 **Când accesezi aplicația:**
-- **Din browser:** `http://83.146.133.42/biblioteca/`
-- **IP-ul serverului:** `83.146.133.42`
+- **Din browser:** `http://65.176.121.45/biblioteca/`
+- **IP-ul serverului:** `65.176.121.45`
 - **Path-ul aplicației:** `/biblioteca/` (subdirector în `/var/www/html/`)
 

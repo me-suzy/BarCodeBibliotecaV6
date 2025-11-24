@@ -1,6 +1,6 @@
 <?php
 $cota = 'IV-4659';
-$url = "http://83.146.133.42:8991/F?func=find-b&request=" . urlencode($cota) . "&find_code=WLB&local_base=RAI01";
+$url = "http://65.176.121.45:8991/F?func=find-b&request=" . urlencode($cota) . "&find_code=WLB&local_base=RAI01";
 
 echo "<h1>Test WLB: {$cota}</h1>";
 echo "<a href='{$url}' target='_blank'>Deschide în Aleph</a><br><br>";
@@ -19,7 +19,7 @@ if (strpos($response, 'Niciun rezultat') !== false) {
     
     foreach ($matches[1] as $i => $link) {
         echo "<br><strong>Rezultat " . ($i+1) . ":</strong><br>";
-        echo "<a href='http://83.146.133.42:8991" . $link . "' target='_blank'>Vezi detalii</a>";
+        echo "<a href='http://65.176.121.45:8991" . $link . "' target='_blank'>Vezi detalii</a>";
     }
 }
 ?>

@@ -8,21 +8,24 @@ if (session_status() == PHP_SESSION_NONE) {
 require_once 'config.php';
 require_once 'auth_check.php';
 
-$ALEPH_SERVER = "83.146.133.42";
+$ALEPH_SERVER = "65.176.121.45";
 $ALEPH_PORT = "8991";
 $ALEPH_BASE_URL = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/F";
 
 /**
  * Helper function pentru fetch URL cu timeout (fără conversie automată)
+ * ACTUALIZAT: Folosește curl cu USERAGENT ca în test.php
  */
-function fetch_url($url, $timeout = 10) {
+function fetch_url($url, $timeout = 60) {
     if (function_exists('curl_init')) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
         
         $result = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -38,7 +41,8 @@ function fetch_url($url, $timeout = 10) {
         $context = stream_context_create([
             'http' => [
                 'timeout' => $timeout,
-                'follow_location' => 1
+                'follow_location' => 1,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             ]
         ]);
         
@@ -77,110 +81,127 @@ function convertAlephEncoding($text) {
 }
 
 /**
- * Funcție principală de căutare în Aleph cu fallback automat
+ * Funcție principală de căutare în Aleph - ABORDARE NOUĂ FĂRĂ PATTERN-URI REGEX
+ * 
+ * Această funcție folosește formularul de căutare Aleph direct, fără a încerca
+ * să determine tipul de căutare prin pattern-uri regex. Încearcă ambele tipuri
+ * de căutare (WLB pentru cote, BAR pentru barcode) și extrage datele direct
+ * din structura HTML a paginii item-global.
  */
 function cautaCarteInAleph($search_term, $search_type = 'AUTO') {
-    global $ALEPH_BASE_URL;
+    global $ALEPH_BASE_URL, $ALEPH_SERVER, $ALEPH_PORT;
     
     $debug_info = [];
     
     try {
-        // 1. Inițializare sesiune
-        $init_url = "{$ALEPH_BASE_URL}?func=file&file_name=find-b";
-        $debug_info['init_url'] = $init_url;
+        // ====================================================================
+        // PASUL 1: Inițializare sesiune Aleph - EXACT ca în test.php (liniile 17-38)
+        // ====================================================================
+        $base_url = "{$ALEPH_BASE_URL}/";
+        $debug_info['init_url'] = $base_url;
         
-        $session_response = fetch_url($init_url);
+        // Folosește curl EXACT ca în test.php
+        $ch = curl_init($base_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        $html = curl_exec($ch);
+        $final_url = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        curl_close($ch);
         
-        // DEBUGGING - salvează răspunsul brut
-        @file_put_contents('debug_session_raw.html', $session_response);
-        $debug_info['session_response_length'] = strlen($session_response);
-        $debug_info['session_response_preview'] = substr($session_response, 0, 500);
+        // Extrage session ID EXACT ca în test.php
+        preg_match('/\/F\/([A-Z0-9\-]+)/', $final_url, $match);
+        $session_id = $match[1] ?? '';
         
-        // NU convertim session_response - session ID-ul e ASCII pur
-        // Încearcă să extragă session ID din răspunsul RAW
-        preg_match('/\/F\/([A-Z0-9\-]+)\?/', $session_response, $matches);
-        $session_id = $matches[1] ?? '';
-        
-        // Dacă nu găsește, încearcă pattern alternativ
         if (empty($session_id)) {
-            preg_match('/\/F\/([A-Z0-9\-]+)/', $session_response, $matches);
-            $session_id = $matches[1] ?? '';
+            preg_match('/href="[^"]*\/F\/([A-Z0-9\-]+)\?func=/i', $html, $match);
+            $session_id = $match[1] ?? '';
         }
         
         if (empty($session_id)) {
-            // Debugging extins
-            $debug_info['session_response_sample'] = substr($session_response, 0, 1000);
-            $debug_info['all_matches'] = [];
-            preg_match_all('/\/F\/[^"\'>\s]+/', $session_response, $all_matches);
-            if (!empty($all_matches[0])) {
-                $debug_info['all_matches'] = array_slice($all_matches[0], 0, 10);
-            }
-            throw new Exception("Nu s-a putut extrage session ID. Verifică debug_session_raw.html pentru detalii.");
+            throw new Exception('Nu s-a putut obține session ID');
         }
         
         $debug_info['session_id'] = $session_id;
+        @file_put_contents('debug_session_raw.html', $html);
         
-        // 🔥 DETECTARE AUTOMATĂ: Verifică dacă este cota sau barcode
+        // ====================================================================
+        // PASUL 2: Căutare în Aleph - încearcă WLB (cota) și BAR (barcode)
+        // ====================================================================
+        // Nu mai folosim pattern-uri regex pentru a determina tipul. Încearcă
+        // ambele tipuri de căutare și folosește primul care returnează rezultate.
+        $search_strategies = [];
+        
         if ($search_type === 'AUTO') {
-            // Detectează dacă este barcode (format: literă urmată imediat de cifre SAU doar cifre, ex: C013121, 000029152-10)
-            // Barcode: literă urmată imediat de cifre (fără cratimă/spațiu între) SAU doar cifre
-            if (preg_match('/^([A-Z]\d{5,}|[A-Z]{2,3}\d{4,}|\d{5,})(-\d{1,2})?$/i', $search_term)) {
-                // Este barcode - folosește BAR primul
-                $search_strategies = ['BAR', 'LOC', 'WRD'];
-                $debug_info['detected_type'] = 'barcode';
-            }
-            // Detectează dacă este cota (format: literă-cifre cu cratimă/spațiu, ex: I-14156, I 14156, II-01270)
-            // Cota: începe cu 1-3 litere, apoi cratimă sau spațiu, apoi cifre
-            elseif (preg_match('/^[A-Z]{1,3}[\s\-]\d+([\s\-]\d+)?$/i', $search_term)) {
-                // Este cota - folosește LOC primul
-                $search_strategies = ['LOC', 'BAR', 'WRD'];
-                $debug_info['detected_type'] = 'cota';
-            } else {
-                // Nu se poate determina - încearcă toate
-                $search_strategies = ['BAR', 'LOC', 'WRD'];
-                $debug_info['detected_type'] = 'unknown';
-            }
+            // Pentru AUTO, încearcă BAR primul (barcode), apoi WLB (cota)
+            // BAR returnează rezultate directe, WLB returnează indexuri
+            $search_strategies = ['BAR', 'WLB'];
         } elseif ($search_type === 'BAR') {
-            $search_strategies = ['BAR', 'WRD'];
-        } elseif ($search_type === 'LOC') {
-            $search_strategies = ['LOC', 'WRD'];
+            $search_strategies = ['BAR'];
+        } elseif ($search_type === 'LOC' || $search_type === 'WLB') {
+            $search_strategies = ['WLB'];
         } else {
             $search_strategies = [$search_type];
         }
         
         $search_response = null;
         $used_strategy = null;
-		
-		// DUPĂ linia cu "used_strategy"
-if ($used_strategy === 'BAR' || $used_strategy === 'LOC') {
-    // Salvează răspunsul pentru debugging
-    file_put_contents('debug_aleph_response.html', $search_response);
-}
         
-        // Încearcă fiecare strategie până găsește
         foreach ($search_strategies as $strategy) {
-            $search_url = "{$ALEPH_BASE_URL}/{$session_id}?func=find-b&request=" . urlencode($search_term) . "&find_code={$strategy}&adjacent=N&local_base=RAI01";
+            // Construiește URL EXACT ca în test.php (linia 42-46)
+            $search_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/F/{$session_id}?func=find-b" .
+                         "&request=" . urlencode($search_term) .
+                         "&find_code={$strategy}" .
+                         "&adjacent=N" .
+                         "&local_base=RAI01";
             $debug_info["search_url_{$strategy}"] = $search_url;
             
-            $temp_response = fetch_url($search_url);
-            // NU convertim aici - folosim doar pentru verificare "no results"
-            $debug_info["search_response_{$strategy}_length"] = strlen($temp_response);
+            // Folosește curl EXACT ca în test.php (liniile 50-56)
+            $ch = curl_init($search_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            $temp_response = curl_exec($ch);
+            curl_close($ch);
             
-            // Verifică dacă sunt rezultate
-            $no_results = (
-                stripos($temp_response, 'Your search found no results') !== false ||
-                stripos($temp_response, 'Căutarea nu a avut rezultate') !== false ||
-                stripos($temp_response, 'nu a avut rezultate') !== false ||
-                stripos($temp_response, 'No results') !== false
+            if (empty($temp_response)) {
+                continue; // Eroare la căutare, continuă cu următoarea strategie
+            }
+            
+            $debug_info["search_response_{$strategy}_length"] = strlen($temp_response);
+            @file_put_contents('debug_aleph_response.html', $temp_response);
+            
+            // Verifică dacă sunt rezultate - EXACT ca în test.php (linia 67)
+            // test.php verifică DOAR 'Nici o înregistrare', nimic altceva
+            if (stripos($temp_response, 'Nici o înregistrare') !== false) {
+                // Nu acceptă acest răspuns, continuă cu următoarea strategie
+                continue;
+            }
+            
+            // IMPORTANT: Verifică dacă este formularul de căutare (nu rezultate)
+            // Dacă este formularul, continuă cu următoarea strategie
+            $is_search_form = (
+                stripos($temp_response, 'Căutare de bază') !== false &&
+                stripos($temp_response, 'Introduceţi termenul') !== false &&
+                stripos($temp_response, 'Câmpul în care se caută') !== false &&
+                stripos($temp_response, 'name="request"') !== false &&
+                stripos($temp_response, 'Rezultate pentru') === false // Nu este pagina de rezultate
             );
             
-            if (!$no_results) {
-                // GĂSIT!
-                $search_response = $temp_response;
-                $used_strategy = $strategy;
-                $debug_info['used_strategy'] = $strategy;
-                break;
+            if ($is_search_form) {
+                // Este formularul de căutare, nu rezultate - continuă cu următoarea strategie
+                $debug_info["search_response_{$strategy}_is_form"] = true;
+                continue;
             }
+            
+            // Dacă nu este "Nici o înregistrare" și nu este formularul, acceptă răspunsul
+            // EXACT ca în test.php - nu verifică alte condiții
+            $search_response = $temp_response;
+            $used_strategy = $strategy;
+            $debug_info['used_strategy'] = $strategy;
+            break;
         }
         
         if ($search_response === null) {
@@ -191,319 +212,168 @@ if ($used_strategy === 'BAR' || $used_strategy === 'LOC') {
             ];
         }
 
-// 🔥 NOU - Verifică dacă există deja o carte în baza de date locală cu acea cotă (DOAR când se caută după cotă)
-$barcode_pentru_cautare = null;
-$necesita_cautare_dupa_barcode = false;
+        // ====================================================================
+        // PASUL 3: Găsire link către "Biblioteca Academiei Iași" (sub_library=ACAD)
+        // ====================================================================
+        // Caută în răspunsul de căutare link-ul către "Biblioteca Academiei Iaşi"
+        // care conține sub_library=ACAD. Acesta este linkul către pagina item-global
+        // cu toate detaliile cărții.
+        $item_url = '';
+        $items_page_html = null; // HTML din pagina intermediară cu exemplare ACAD
 
-// Aplică logica DOAR pentru căutare după cotă (LOC), NU pentru barcode (BAR)
-if ($used_strategy === 'LOC' && ($debug_info['detected_type'] ?? '') === 'cota') {
-    try {
-        global $pdo;
-        // Verifică dacă există o carte în baza de date locală cu acea cotă
-        $stmt = $pdo->prepare("SELECT cod_bare FROM carti WHERE cota = ? LIMIT 1");
-        $stmt->execute([$search_term]);
-        $carte_bd = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Decodifică entitățile HTML pentru a găsi link-urile corect (ex: &amp; devine &)
+        $search_response_decoded = html_entity_decode($search_response, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         
-        if ($carte_bd && !empty($carte_bd['cod_bare'])) {
-            $barcode_pentru_cautare = $carte_bd['cod_bare'];
-            $necesita_cautare_dupa_barcode = true;
-            $debug_info['barcode_din_bd'] = $barcode_pentru_cautare;
-        }
-    } catch (Exception $e) {
-        $debug_info['bd_check_error'] = $e->getMessage();
-    }
-    
-    // Dacă nu există barcode în BD, extrage barcode-urile din rezultatele Aleph
-    if (empty($barcode_pentru_cautare)) {
-        // Extrage toate link-urile către item-global din pagina de rezultate cu ACAD
-        preg_match_all('/<A\s+[^>]*HREF\s*=\s*["\']?([^"\'>\s]*func=item-global[^"\'>\s]*sub_library=ACAD[^"\'>\s]*)["\']?/i', $search_response, $acad_links);
-        
-        // Dacă nu găsește cu ACAD explicit, caută toate link-urile item-global
-        if (empty($acad_links[1])) {
-            preg_match_all('/<A\s+[^>]*HREF\s*=\s*["\']?([^"\'>\s]*func=item-global[^"\'>\s]*)["\']?/i', $search_response, $all_item_links);
-            $acad_links = $all_item_links;
-        }
-        
-        // Folosește primul link găsit pentru a accesa pagina item-global și a extrage barcode-ul
-        if (!empty($acad_links[1][0])) {
-            $link_item = html_entity_decode(trim($acad_links[1][0]));
-            $link_item = preg_replace('/[<>"\']/', '', $link_item);
-            
-            // Normalizează linkul
-            if (strpos($link_item, 'http') === 0) {
-                $temp_item_url = $link_item;
-            } elseif (strpos($link_item, '/F/') === 0 || strpos($link_item, 'F/') === 0) {
-                $link_item = ltrim($link_item, '/');
-                $temp_item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/{$link_item}";
+        // ====================================================================
+        // Metoda 1: Link direct către func=item-global cu sub_library=ACAD
+        // ====================================================================
+        // Caută link DIRECT care conține AMBELE: func=item-global ȘI sub_library=ACAD
+        // Acest pattern trebuie să găsească AMBELE în același href
+        // EXACT același pattern ca în test.php (linia 74)
+
+        if (preg_match('/<a[^>]+href=["\']([^"\']+func=item-global[^"\']+sub_library=ACAD[^"\']*)["\'][^>]*>/i', $search_response_decoded, $match)) {
+            $href = str_replace('&amp;', '&', $match[1]);
+
+            // Construiește URL complet
+            if (strpos($href, 'http') === 0) {
+                $item_url = $href;
+            } elseif (strpos($href, '/F/') === 0) {
+                $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}" . $href;
             } else {
-                // Adaugă sub_library=ACAD dacă nu există
-                if (strpos($link_item, 'sub_library=') === false) {
-                    $separator = (strpos($link_item, '?') !== false) ? '&' : '?';
-                    $link_item .= $separator . 'sub_library=ACAD';
-                }
-                $temp_item_url = "{$ALEPH_BASE_URL}/{$session_id}?{$link_item}";
+                $item_url = "{$ALEPH_BASE_URL}/{$session_id}?" . ltrim($href, '?');
             }
-            
-            // Accesează pagina item-global pentru a extrage barcode-ul
-            try {
-                $temp_item_html = fetch_url($temp_item_url);
-                $temp_item_html = convertAlephEncoding($temp_item_html);
-                
-                // Extrage barcode-ul din pagina item-global (coloana "Barcod")
-                // Caută pattern: <td class=td1>C003016</td> în tabelul de exemplare
-                // Barcode-ul apare în ultima coloană a tabelului
-                if (preg_match_all('/<td[^>]*class=["\']?td1["\']?[^>]*>([A-Z]?\d{5,}(?:-\d{1,2})?)<\/td>/i', $temp_item_html, $barcode_matches)) {
-                    // Folosește ultimul barcode găsit (cel din coloana Barcod)
-                    if (!empty($barcode_matches[1])) {
-                        $barcode_pentru_cautare = trim(end($barcode_matches[1]));
-                        $necesita_cautare_dupa_barcode = true;
-                        $debug_info['barcode_din_aleph'] = $barcode_pentru_cautare;
-                    }
-                }
-            } catch (Exception $e) {
-                $debug_info['barcode_extraction_error'] = $e->getMessage();
-            }
-        }
-    }
-    
-    // Dacă am găsit un barcode, folosește-l pentru căutare exactă (DOAR pentru cotă)
-    if ($necesita_cautare_dupa_barcode && !empty($barcode_pentru_cautare)) {
-        // Caută din nou după barcode pentru identificare exactă
-        try {
-            $barcode_search_url = "{$ALEPH_BASE_URL}/{$session_id}?func=find-b&request=" . urlencode($barcode_pentru_cautare) . "&find_code=BAR&adjacent=N&local_base=RAI01";
-            $barcode_search_response = fetch_url($barcode_search_url);
-            
-            // Verifică dacă sunt rezultate
-            $no_results_barcode = (
-                stripos($barcode_search_response, 'Your search found no results') !== false ||
-                stripos($barcode_search_response, 'Căutarea nu a avut rezultate') !== false ||
-                stripos($barcode_search_response, 'No results') !== false
-            );
-            
-            if (!$no_results_barcode) {
-                // Folosește răspunsul de la căutarea după barcode
-                $search_response = $barcode_search_response;
-                $used_strategy = 'BAR';
-                $debug_info['used_barcode_for_exact_match'] = $barcode_pentru_cautare;
-                $debug_info['original_search_was_cota'] = $search_term;
-            }
-        } catch (Exception $e) {
-            $debug_info['barcode_search_error'] = $e->getMessage();
-        }
-    }
-}
 
-// 3. Extrage date pentru navigare către detalii
-$full_detail_url = '';
-$item_url = '';
+            $debug_info['found_via'] = 'method_1_direct_acad_link';
+            $debug_info['item_url_method_1'] = $item_url;
+        }
+        
+        // Metoda 1b: Link către func=item-global FĂRĂ sub_library=ACAD (dar adăugăm ACAD manual)
+        // Pentru cazuri când link-ul nu specifică sub_library, dar cartea există în ACAD
+        if (empty($item_url) && preg_match('/<a[^>]+href=["\']([^"\']+func=item-global[^"\']*)["\'][^>]*>/i', $search_response_decoded, $match)) {
+            $href = str_replace('&amp;', '&', $match[1]);
+            
+            // Adaugă sub_library=ACAD dacă nu există deja
+            if (stripos($href, 'sub_library=') === false) {
+                $href .= (strpos($href, '?') !== false ? '&' : '?') . 'sub_library=ACAD';
+            }
 
-// 🔥 METODA 1: Caută linkuri direct în răspunsul de căutare (funcționează pentru cota și barcode)
-// Caută linkuri către item-global sau direct în răspunsul HTML (pattern mai permisiv)
-preg_match_all('/<A\s+[^>]*HREF\s*=\s*["\']?([^"\'>\s]*func=(?:item-global|direct|full-set)[^"\'>\s]*)["\']?/i', $search_response, $direct_links);
-// Dacă nu găsește cu pattern-ul de mai sus, încearcă un pattern mai simplu
-if (empty($direct_links[1])) {
-    preg_match_all('/href\s*=\s*["\']?([^"\'>]*func=(?:item-global|direct|full-set)[^"\'>]*)["\']?/i', $search_response, $direct_links);
-}
-// Dacă tot nu găsește, încearcă să găsească linkuri care conțin doc_number
-if (empty($direct_links[1])) {
-    preg_match_all('/href\s*=\s*["\']?([^"\'>]*doc_number[^"\'>]*)["\']?/i', $search_response, $direct_links);
-}
-// Dacă tot nu găsește, încearcă să găsească orice link către /F/ cu session_id
-if (empty($direct_links[1])) {
-    preg_match_all('/href\s*=\s*["\']?(\/F\/[^"\'>\s]+)["\']?/i', $search_response, $direct_links);
-}
-// Dacă tot nu găsește, încearcă să găsească linkuri în format diferit (pentru barcode)
-if (empty($direct_links[1])) {
-    // Caută linkuri care conțin "Filială" sau "Exemplare" (din tabelul de rezultate)
-    preg_match_all('/<A\s+[^>]*HREF\s*=\s*["\']?([^"\'>\s]*\/F\/[^"\'>\s]*)["\']?/i', $search_response, $direct_links);
-}
-if (!empty($direct_links[1])) {
-    foreach ($direct_links[1] as $link_raw) {
-        $link = html_entity_decode(trim($link_raw));
-        
-        // Curăță linkul de caractere nedorite
-        $link = preg_replace('/[<>"\']/', '', $link);
-        
-        // Preferă linkuri cu sub_library=ACAD sau func=item-global
-        if (strpos($link, 'sub_library=ACAD') !== false || strpos($link, 'func=item-global') !== false || 
-            strpos($link, 'doc_number') !== false) {
-            // Normalizează linkul
-            if (strpos($link, 'http') === 0) {
-                $item_url = $link;
-            } elseif (strpos($link, '/F/') === 0 || strpos($link, 'F/') === 0) {
-                // Link relativ care începe cu /F/ sau F/
-                $link = ltrim($link, '/');
-                $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/{$link}";
-            } elseif (strpos($link, '?') === 0) {
-                // Link care începe cu ?
-                $item_url = "{$ALEPH_BASE_URL}/{$session_id}{$link}";
-            } elseif (strpos($link, 'func=') !== false || strpos($link, 'doc_number') !== false) {
-                // Link cu parametri func sau doc_number
-                $item_url = "{$ALEPH_BASE_URL}/{$session_id}?{$link}";
+            // Construiește URL complet
+            if (strpos($href, 'http') === 0) {
+                $item_url = $href;
+            } elseif (strpos($href, '/F/') === 0) {
+                $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}" . $href;
             } else {
-                // Altfel, încearcă să construiască URL
-                $item_url = "{$ALEPH_BASE_URL}/{$session_id}?{$link}";
+                $item_url = "{$ALEPH_BASE_URL}/{$session_id}?" . ltrim($href, '?');
             }
-            $debug_info['found_direct_link'] = $link_raw;
-            break;
-        }
-    }
-    // Dacă nu găsește cu ACAD, folosește primul link disponibil
-    if (empty($item_url) && !empty($direct_links[1][0])) {
-        $link = html_entity_decode(trim($direct_links[1][0]));
-        $link = preg_replace('/[<>"\']/', '', $link);
-        
-        // ✅ NOU - Adaugă sub_library=ACAD dacă nu există deja
-        if (strpos($link, 'sub_library=') === false) {
-            $separator = (strpos($link, '?') !== false) ? '&' : '?';
-            $link .= $separator . 'sub_library=ACAD';
-        }
-        
-        if (strpos($link, 'http') === 0) {
-            $item_url = $link;
-        } elseif (strpos($link, '/F/') === 0 || strpos($link, 'F/') === 0) {
-            // Link către /F/ - verifică dacă are deja parametri
-            $link = ltrim($link, '/');
-            if (strpos($link, '?') === false && strpos($link, 'func=') === false) {
-                // Nu are parametri - adaugă func=item-global și sub_library=ACAD
-                $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/{$link}?func=item-global&doc_library=RAI01&sub_library=ACAD";
-            } else {
-                // Are parametri - verifică dacă are sub_library
-                if (strpos($link, 'sub_library=') === false) {
-                    $separator = (strpos($link, '?') !== false) ? '&' : '?';
-                    $link .= $separator . 'sub_library=ACAD';
-                }
-                $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}/{$link}";
-            }
-        } elseif (strpos($link, '?') === 0) {
-            $item_url = "{$ALEPH_BASE_URL}/{$session_id}{$link}";
-        } elseif (strpos($link, 'func=') !== false || strpos($link, 'doc_number') !== false) {
-            $item_url = "{$ALEPH_BASE_URL}/{$session_id}?{$link}";
-        } else {
-            // Link fără parametri - încearcă să construiască cu func=item-global și sub_library=ACAD
-            $item_url = "{$ALEPH_BASE_URL}/{$session_id}?func=item-global&doc_library=RAI01&sub_library=ACAD&{$link}";
-        }
-        $debug_info['used_first_direct_link'] = $link;
-    }
-}
 
-// 🔥 METODA 2: Caută set_number și set_entry (funcționează pentru barcode)
-if (empty($item_url) && preg_match('/set_number=(\d+)/i', $search_response, $set_num_match) &&
-    preg_match('/set_entry=(\d+)/i', $search_response, $set_entry_match)) {
-    
-    $set_number = $set_num_match[1];
-    $set_entry = $set_entry_match[1];
-    
-    // Construiește URL pentru accesarea rezultatului specific
-    $result_url = "{$ALEPH_BASE_URL}/{$session_id}?func=direct&doc_number={$set_entry}&local_base=RAI01";
-    $debug_info['result_url'] = $result_url;
-    
-    try {
-        // Fetch pagina rezultatului specific
-        $result_html = fetch_url($result_url);
-        $result_html = convertAlephEncoding($result_html);
-        
-        // Acum caută linkuri în pagina rezultatului
-        preg_match('/<A\s+HREF=["\']?([^"\'>\s]*func=full-set-set[^"\'>\s]*)["\']?/i', $result_html, $full_match);
-        $full_detail_url = isset($full_match[1]) ? html_entity_decode(trim($full_match[1])) : '';
-        
-        // Caută linkuri către item-global (pattern mai permisiv)
-        preg_match_all('/<A\s+[^>]*HREF\s*=\s*["\']?([^"\'>\s]*func=item-global[^"\'>\s]*)["\']?/i', $result_html, $all_links);
-        // Dacă nu găsește, încearcă pattern mai simplu
-        if (empty($all_links[1])) {
-            preg_match_all('/href\s*=\s*["\']?([^"\'>]*func=item-global[^"\'>]*)["\']?/i', $result_html, $all_links);
-        }
-        // Dacă tot nu găsește, caută orice link către /F/ (poate fi în tabelul de rezultate)
-        if (empty($all_links[1])) {
-            preg_match_all('/<A\s+[^>]*HREF\s*=\s*["\']?([^"\'>\s]*\/F\/[^"\'>\s]*)["\']?/i', $result_html, $all_links);
+            $debug_info['found_via'] = 'method_1b_item_global_without_acad';
+            $debug_info['item_url_method_1b'] = $item_url;
         }
         
-        if (!empty($all_links[1])) {
-            foreach ($all_links[1] as $link) {
-                $link = html_entity_decode(trim($link));
-                if (strpos($link, 'sub_library=ACAD') !== false) {
-                    if (strpos($link, 'http') === 0) {
-                        $item_url = $link;
-                    } elseif (strpos($link, '/F/') === 0) {
-                        $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}{$link}";
-                    } else {
-                        $item_url = "{$ALEPH_BASE_URL}/{$session_id}?{$link}";
-                    }
-                    break;
-                }
-            }
-            if (empty($item_url) && !empty($all_links[1])) {
-                $link = html_entity_decode(trim($all_links[1][0]));
-                // ✅ NOU - Adaugă sub_library=ACAD dacă nu există deja
-                if (strpos($link, 'sub_library=') === false) {
-                    $separator = (strpos($link, '?') !== false) ? '&' : '?';
-                    $link .= $separator . 'sub_library=ACAD';
-                }
-                
-                if (strpos($link, 'http') === 0) {
-                    $item_url = $link;
-                } elseif (strpos($link, '/F/') === 0) {
-                    $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}{$link}";
-                } else {
-                    $item_url = "{$ALEPH_BASE_URL}/{$session_id}?{$link}";
-                }
-            }
-        }
-        
-        // Dacă tot nu găsește, construiește manual
+        // ====================================================================
+        // Metoda 2: Link către "Biblioteca Academiei Iași(X/Y)" - LINK INTERMEDIAR
+        // ====================================================================
+        // Această metodă caută linkul către "Biblioteca Academiei Iași(X/Y)" care
+        // duce la o pagină intermediară cu exemplarele ACAD. Apoi accesează acea
+        // pagină intermediară și folosește HTML-ul rezultat pentru extragere date.
+        // Se execută DOAR dacă Metoda 1 nu a găsit link direct cu ACAD
         if (empty($item_url)) {
-            // Caută doc_number în pagina rezultatului
-            if (preg_match('/doc_number=(\d+)/i', $result_html, $doc_match)) {
-                $doc_number = $doc_match[1];
-                // ✅ NOU - Adaugă sub_library=ACAD pentru a filtra după Biblioteca Academiei Iași
-                $item_url = "{$ALEPH_BASE_URL}/{$session_id}?func=item-global&doc_library=RAI01&doc_number={$doc_number}&sub_library=ACAD";
-                $debug_info['manual_item_url'] = true;
+            $debug_info['method_2_started'] = true;
+
+            // Salvează un sample din search_response pentru debugging
+            @file_put_contents('debug_search_response_sample.html', substr($search_response_decoded, 0, 5000));
+
+            // Pattern specific pentru "Biblioteca Academiei Iași(X/Y)"
+            // EXACT același pattern ca în test.php
+            if (preg_match('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>\s*Biblioteca\s+Academiei\s+Ia[șs]i\s*\(\s*\d+\s*\/\s*\d+\s*\)/is', $search_response_decoded, $biblioteca_match)) {
+                $href = str_replace('&amp;', '&', $biblioteca_match[1]);
+
+                // Construiește URL-ul complet către pagina intermediară
+                if (strpos($href, 'http') === 0) {
+                    $intermediate_url = $href;
+                } elseif (strpos($href, '/F/') === 0) {
+                    $intermediate_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}" . $href;
+                } else {
+                    $intermediate_url = "{$ALEPH_BASE_URL}/{$session_id}?" . ltrim($href, '?');
+                }
+
+                $debug_info['intermediate_url'] = $intermediate_url;
+                $debug_info['found_via'] = 'biblioteca_academiei_link';
+
+                // Accesează pagina intermediară cu exemplare ACAD - EXACT ca în test.php (liniile 110-134)
+                $ch = curl_init($intermediate_url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+                
+                $items_page_html = curl_exec($ch);
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curl_error = curl_error($ch);
+                curl_close($ch);
+                
+                $debug_info['method_2_http_code'] = $http_code;
+                if (!empty($curl_error)) {
+                    $debug_info['method_2_curl_error'] = $curl_error;
+                }
+                
+                if (empty($items_page_html) || $http_code != 200) {
+                    $debug_info['method_2_empty_response'] = true;
+                } else {
+                    $debug_info['items_page_html_length'] = strlen($items_page_html);
+                    @file_put_contents('debug_items_page_aleph_api.html', $items_page_html);
+                    
+                    // Această pagină devine sursa pentru extragere date - EXACT ca în test.php (linia 137)
+                    $search_response = $items_page_html; // Actualizează search_response cu HTML-ul din pagina intermediară
+                    $item_url = $intermediate_url;
+                    $debug_info['method_2_success'] = true;
+                }
+            } else {
+                $debug_info['method_2_no_match'] = true;
             }
         }
-    } catch (Exception $e) {
-        $debug_info['result_url_error'] = $e->getMessage();
-    }
-}
 
-// 🔥 METODA 3: FALLBACK - încearcă construcție directă din search response
-if (empty($item_url)) {
-    // Caută orice doc_number în răspuns
-    if (preg_match('/doc_number=(\d+)/i', $search_response, $doc_direct)) {
-        $doc_number = $doc_direct[1];
-        // ✅ NOU - Adaugă sub_library=ACAD pentru a filtra după Biblioteca Academiei Iași
-        $item_url = "{$ALEPH_BASE_URL}/{$session_id}?func=item-global&doc_library=RAI01&doc_number={$doc_number}&sub_library=ACAD";
-        $debug_info['fallback_doc_number'] = $doc_number;
-    }
-}
+        // ====================================================================
+        // Metoda 3: doc_number cu ACAD (fallback)
+        // ====================================================================
+        // Dacă Metoda 1 și 2 nu au găsit link, caută doc_number în HTML
+        // Exact ca în test.php (liniile 145-160)
+        if (empty($item_url)) {
+            $debug_info['method_3_started'] = true;
 
-// 🔥 METODA 4: Caută linkuri în format diferit (pentru cazuri speciale)
-if (empty($item_url)) {
-    // Caută linkuri care conțin session_id și func
-    preg_match_all('/\/F\/[^"\'>\s]*\?[^"\'>\s]*func=(?:item-global|direct)[^"\'>\s]*/i', $search_response, $session_links);
-    if (!empty($session_links[0])) {
-        $link = trim($session_links[0][0]);
-        if (strpos($link, 'http') !== 0) {
-            $item_url = "http://{$ALEPH_SERVER}:{$ALEPH_PORT}{$link}";
-        } else {
-            $item_url = $link;
+            // Caută în $items_page_html dacă există (din Metoda 2), altfel în $search_response
+            $search_html = !empty($items_page_html) ? $items_page_html : $search_response;
+
+            preg_match_all('/doc_number=(\d+)/i', $search_html, $doc_matches);
+            $unique_docs = array_unique($doc_matches[1]);
+
+            $debug_info['doc_numbers_found'] = count($unique_docs);
+
+            if (count($unique_docs) > 0) {
+                // Folosește primul doc_number găsit
+                $doc_num = $unique_docs[0];
+                $item_url = "{$ALEPH_BASE_URL}/{$session_id}?func=item-global&doc_library=RAI01&doc_number={$doc_num}&sub_library=ACAD";
+                $debug_info['found_via'] = 'method_3_doc_number';
+                $debug_info['doc_number'] = $doc_num;
+            }
         }
-        $debug_info['found_session_link'] = $link;
-    }
-}
 
-$debug_info['full_detail_url'] = $full_detail_url;
-$debug_info['item_url'] = $item_url;
-
-if (empty($full_detail_url) && empty($item_url)) {
-    return [
-        'success' => false,
-        'mesaj' => "Nu s-au găsit linkuri către detalii în pagina de rezultate",
-        'debug' => $debug_info,
-        'search_response_sample' => substr($search_response, 0, 2000)
-    ];
-}
+        // Verificare finală - dacă nu s-a găsit niciun URL
+        $debug_info['final_item_url'] = $item_url ?? 'EMPTY';
         
+        if (empty($item_url)) {
+            return [
+                'success' => false,
+                'mesaj' => "Nu s-a găsit link către Biblioteca Academiei Iași în rezultatele căutării",
+                'debug' => $debug_info,
+                'search_response_sample' => substr($search_response, 0, 2000)
+            ];
+        }
+        
+        // ====================================================================
         // Inițializare date
+        // ====================================================================
         $data = [
             'titlu' => '',
             'autor' => '',
@@ -521,114 +391,80 @@ if (empty($full_detail_url) && empty($item_url)) {
             'sectiune' => ''
         ];
         
-        // ✅ CRITIC - NU extragem titlul din search_response (pagina de rezultate)
-        // Titlul real trebuie extras DOAR din item_html (pagina item-global)
-        // search_response conține doar text generic de navigare ("Înregistrările selectate", etc.)
-        
-        // 4. FETCH PAGINA COMPLETĂ (full_detail_url - dacă există)
-        if (!empty($full_detail_url)) {
-            try {
-                $full_html = fetch_url($full_detail_url);
-                $full_html = convertAlephEncoding($full_html);
-                
-                $dom = new DOMDocument();
-                @$dom->loadHTML(mb_convert_encoding($full_html, 'HTML-ENTITIES', 'UTF-8'));
-                $tds = $dom->getElementsByTagName('td');
-                
-                for ($i = 0; $i < $tds->length - 1; $i++) {
-                    $current_td = $tds->item($i);
-                    $next_td = $tds->item($i + 1);
-                    
-                    if ($current_td->getAttribute('class') !== 'td1' || 
-                        $next_td->getAttribute('class') !== 'td1') {
-                        continue;
-                    }
-                    
-                    $label = trim($current_td->textContent);
-                    $value = trim($next_td->textContent);
-                    
-                    if (empty($value) || $value === ' ') {
-                        continue;
-                    }
-                    
-                    // Verifică că nu este text de navigare
-                    $clean_value = trim($value);
-                    if (stripos($clean_value, 'Catalog general') !== false || 
-                        stripos($clean_value, 'Colecţii') !== false || 
-                        stripos($clean_value, 'Selectaţi') !== false) {
-                        continue;
-                    }
-                    
-                    if (stripos($label, 'ISBN') !== false && empty($data['isbn'])) {
-                        if (preg_match('/[\d\-Xx]{10,}/', $value, $isbn_match)) {
-                            $data['isbn'] = $isbn_match[0];
-                        }
-                    } 
-                    else if (stripos($label, 'Autor') !== false && empty($data['autor'])) {
-                        if (strlen($clean_value) > 2 && !stripos($clean_value, 'Selectaţi')) {
-                            $data['autor'] = $clean_value;
-                        }
-                    } 
-                    else if (stripos($label, 'Titlu') !== false && empty($data['titlu'])) {
-                        if (strlen($clean_value) > 5 && !stripos($clean_value, '>')) {
-                            $data['titlu'] = $clean_value;
-                        }
-                    } 
-                    else if (stripos($label, 'Editură') !== false && empty($data['editura'])) {
-                        $data['editura'] = $clean_value;
-                    } 
-                    else if (stripos($label, 'Localitate') !== false && empty($data['localitate'])) {
-                        $data['localitate'] = $clean_value;
-                    } 
-                    else if (stripos($label, 'An') !== false && empty($data['anul']) && preg_match('/\b(19|20)\d{2}\b/', $value, $year_match)) {
-                        $data['anul'] = $year_match[0];
-                    }
-                    // Caută cota în full_detail_url
-                    else if ((stripos($label, 'Call') !== false || stripos($label, 'Cotă') !== false || 
-                             stripos($label, 'Cota') !== false || stripos($label, 'Locat') !== false) && 
-                            empty($data['cota']) && !empty($value)) {
-                        if (preg_match('/^[A-Z]{1,3}[\s\-]?\d+([\s\-]\d+)?$/i', trim($value))) {
-                            $data['cota'] = trim($value);
-                            $data['locatie'] = trim($value);
-                        }
-                    }
-                }
-            } catch (Exception $e) {
-                $debug_info['full_detail_url_error'] = $e->getMessage();
+        // ====================================================================
+        // PASUL 4: Extragere date din pagina item-global
+        // ====================================================================
+        // Accesează pagina item-global și extrage datele direct din structura
+        // HTML standard (TD-uri cu clasa td1), fără pattern-uri regex pentru
+        // cote și barcode-uri. Această abordare funcționează pentru orice format.
+
+        // Dacă avem HTML din pagina intermediară (Metoda 2), folosește-l
+        // Altfel, face fetch la item_url - EXACT ca în test.php (liniile 172-192)
+        if (!empty($items_page_html)) {
+            $item_html = $items_page_html;
+            $debug_info['used_items_page_html'] = true;
+        } else {
+            // Folosește curl EXACT ca în test.php (liniile 177-186)
+            $ch = curl_init($item_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            
+            $item_html = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if (empty($item_html) || $http_code != 200) {
+                throw new Exception('Nu s-au putut obține datele cărții');
             }
+            
+            $debug_info['fetched_item_url'] = true;
+        }
+
+        // DEBUGGING
+        @file_put_contents('debug_aleph_raw.html', $item_html);
+        $item_html = convertAlephEncoding($item_html);
+        @file_put_contents('debug_aleph_converted.html', $item_html);
+            
+        // ====================================================================
+        // Extragere date din structura HTML standard (TD-uri cu clasa td1)
+        // ====================================================================
+        // Această metodă extrage datele direct din structura HTML a paginii
+        // item-global, folosind EXACT aceeași logică ca în test.php (liniile 199-227)
+        
+        // METODA 1: Extrage autor și titlu (EXACT ca în test.php)
+        // Pattern din test.php: /<td[^>]*class=["\']?td1["\']?[^>]*>\s*Author\s+(.+?)<br>/is
+        if (preg_match('/<td[^>]*class=["\']?td1["\']?[^>]*>\s*Author\s+(.+?)<br>/is', $item_html, $m)) {
+            $autor_titlu = trim(preg_replace('/\s+/', ' ', strip_tags($m[1])));
+            
+            if (preg_match('/^(.+?)\s*\/\s*(.+)$/s', $autor_titlu, $parts)) {
+                $partea1 = trim($parts[1]);
+                $partea2 = trim($parts[2]);
+                
+                if (preg_match('/^(.+?)\.\s+([A-Z].+)$/s', $partea1, $split)) {
+                    $data['autor'] = trim($split[1]);
+                    $data['titlu'] = trim($split[2]);
+                } else {
+                    $data['autor'] = $partea2;
+                    $data['titlu'] = $partea1;
+                }
+            } else {
+                $data['titlu'] = $autor_titlu;
+            }
+            
+            if (strpos($data['titlu'], ';') !== false) {
+                $data['titlu'] = trim(explode(';', $data['titlu'])[0]);
+            }
+            
+            $debug_info['extracted_via_test_php_method'] = true;
+            $debug_info['autor_extracted'] = substr($data['autor'], 0, 50);
+            $debug_info['titlu_extracted'] = substr($data['titlu'], 0, 70);
         }
         
-        // 5. FETCH PAGINA EXEMPLARE
-        if (!empty($item_url)) {
-            $item_html = fetch_url($item_url);
-            
-            // DEBUGGING - salvează răspunsul brut
-            @file_put_contents('debug_aleph_raw.html', $item_html);
-            
-            // Detectează encoding-ul original (fără Windows-1250 - nu e recunoscut de mb_detect_encoding)
-            $detected_encoding = mb_detect_encoding($item_html, ['UTF-8', 'ISO-8859-2', 'ISO-8859-1'], true);
-            @file_put_contents('debug_encoding.txt', "Detected: " . ($detected_encoding ?: 'UNKNOWN') . "\n", FILE_APPEND);
-            
-            // Convertește
-            $item_html = convertAlephEncoding($item_html);
-            
-            // Salvează după conversie
-            @file_put_contents('debug_aleph_converted.html', $item_html);
-            
-            // 🔥 METODA 1: Caută titlu/autor în format HTML standard (evită text de navigare)
-            // ✅ CRITIC - Exclude link-urile de navigare și header-ul înainte de a extrage titlul
-            // Exclude link-uri de navigare (func=BOR-INFO, func=file&file_name=login, etc.)
-            $item_html_clean = preg_replace('/<a\s+[^>]*href[^>]*(?:func=(?:BOR-INFO|file|logout|option-show|base-list|feedback|help-1|ill-request))[^>]*>.*?<\/a>/is', '', $item_html);
-            $item_html_clean = preg_replace('/<A\s+[^>]*HREF[^>]*(?:func=(?:BOR-INFO|file|logout|option-show|base-list|feedback|help-1|ill-request))[^>]*>.*?<\/A>/is', '', $item_html_clean);
-            
-            // Exclude header-ul paginii (middlebar, etc.)
-            $item_html_clean = preg_replace('/<td[^>]*class=["\']?middlebar["\'][^>]*>.*?<\/td>/is', '', $item_html_clean);
-            
-            // Exclude textul generic de navigare
-            $item_html_clean = preg_replace('/<a[^>]*>(?:Permis de bibliotecă|Înregistrările selectate|Selectați|Sfârşitul sesiunii)<\/a>/is', '', $item_html_clean);
-            $item_html_clean = preg_replace('/<A[^>]*>(?:Permis de bibliotecă|Înregistrările selectate|Selectați|Sfârşitul sesiunii)<\/A>/is', '', $item_html_clean);
-            
-            if (empty($data['titlu'])) {
+        // Fallback: Extrage titlu/autor din primul TD cu clasa td1 (format standard Aleph)
+        if (empty($data['titlu'])) {
                 // Pattern 1: Author. Title : ... / ... (format standard Aleph din item-global)
                 // Exemplu: "Author Uritescu, Dorin N.. Fascinaţia numelui : Studiu al creaţiei lexico-semantice şi stilistice, în relaţiile: -nume propriu-nume comun şi nume comun-nume propriu- / Dorin N. Uritescu"
                 if (preg_match('/Author\s+([^\.]+)\.\.?\s+([^:]+):\s*([^\/]+)\s*\/\s*(.+?)(?:<br>|<\/|$)/is', $item_html_clean, $matches)) {
@@ -778,8 +614,9 @@ if (empty($full_detail_url) && empty($item_url)) {
                         !stripos($text, 'BARI') && !stripos($text, 'catalog general') &&
                         !stripos($text, 'Permis de bibliotecă') && !stripos($text, 'Permis de biblioteca') &&
                         !stripos($text, 'Înregistrările selectate') && !stripos($text, 'Inregistrarile selectate') &&
-                        !preg_match('/^[A-Z]{1,3}[\s\-]?\d+([\s\-]\d+)?$/i', $text) && // nu este cota
-                        !preg_match('/^([A-Z]{1,3})?\d{5,}(-\d{1,2})?$/i', $text)) { // nu este barcode
+                        !preg_match('/^[A-Z]{1,3}[\s\-]?\d+([\s\-]\d+)?$/i', $text) && // nu este cota (I-14156)
+                        !preg_match('/^[A-Z]{2,3}\s+[A-Za-z]+\/\d+$/i', $text) && // nu este cota (SL Irimia/1146)
+                        !preg_match('/^([A-Z]\d{5,}|[A-Z]{2,3}\d{4,}|\d{5,})(-\d{1,2})?$/i', $text)) { // nu este barcode
                         // Verifică dacă conține pattern de titlu (mai multe cuvinte)
                         if (preg_match('/\b\w+\b.*\b\w+\b.*\b\w+\b/', $text)) {
                             $data['titlu'] = $text;
@@ -808,59 +645,180 @@ if (empty($full_detail_url) && empty($item_url)) {
                     }
                 }
             }
-            
-            // Parsing individual TD-uri pentru cota, barcode, etc.
-            for ($i = 0; $i < $tds->length; $i++) {
-                $td = $tds->item($i);
-                $text = trim($td->textContent);
-                
-                // 🔥 COTĂ - pattern mai permisiv (acceptă I-14156, I 14156, I14156, etc.)
-                // Caută în toate TD-urile, nu doar în primul
-                if (empty($data['cota']) && 
-                    preg_match('/^[A-Z]{1,3}[\s\-]?\d+([\s\-]\d+)?$/i', $text)) {
-                    $data['cota'] = $text;
-                    $data['locatie'] = $text;
-                }
-                // Caută și variante cu spații sau format diferit
-                if (empty($data['cota']) && 
-                    preg_match('/\b([A-Z]{1,3}[\s\-]?\d+[\s\-]?\d*)\b/i', $text, $cota_match)) {
-                    $potential_cota = trim($cota_match[1]);
-                    if (preg_match('/^[A-Z]{1,3}[\s\-]?\d+([\s\-]\d+)?$/i', $potential_cota)) {
-                        $data['cota'] = $potential_cota;
-                        $data['locatie'] = $potential_cota;
-                    }
-                }
-                
-                // Colecție
-                if (empty($data['colectie']) && 
-                    (stripos($text, 'depozit') !== false || stripos($text, 'Cărți') !== false || 
-                     stripos($text, 'sala de lectură') !== false || stripos($text, 'Carte') !== false)) {
-                    if (!stripos($text, 'Bibliotec') && strlen($text) < 100) {
-                        $data['colectie'] = $text;
-                        $data['sectiune'] = $text;
-                    }
-                }
-                
-                // Bibliotecă
-                if (empty($data['biblioteca']) && 
-                    stripos($text, 'Biblioteca Academiei') !== false &&
-                    stripos($text, 'Toate') === false) {
-                    $data['biblioteca'] = $text;
-                }
-                
-                // Status
-                if (empty($data['status']) && 
-                    (stripos($text, 'Pe raft') !== false || 
-                     stripos($text, 'Pentru împrumut') !== false ||
-                     stripos($text, 'Împrumutat') !== false ||
-                     stripos($text, 'Doar pentru SL') !== false)) {
+
+        // ====================================================================
+        // METODA 2A: Extragere cota și barcode din TOATE rândurile cu td1
+        // ====================================================================
+        // Această metodă parcurge TOATE rândurile cu class=td1 din pagina
+        // intermediară (ca în test.php) și extrage date din fiecare celulă
+        // folosind pattern-uri regex. Această abordare găsește mai multe
+        // exemplare decât metoda DOM parsing.
+
+        // Extragem toate rândurile <tr>
+        preg_match_all('/<tr[^>]*>(.*?)<\/tr>/is', $item_html, $all_rows);
+        $debug_info['total_rows_found'] = count($all_rows[1]);
+
+        // Filtrăm doar rândurile care conțin td1
+        $rows_with_td1 = [];
+        foreach ($all_rows[1] as $row) {
+            if (stripos($row, 'class=td1') !== false || stripos($row, 'class="td1"') !== false) {
+                $rows_with_td1[] = $row;
+            }
+        }
+        $debug_info['rows_with_td1'] = count($rows_with_td1);
+
+        // Parcurgem fiecare rând cu td1
+        foreach ($rows_with_td1 as $row_html) {
+            // Extragem toate celulele td cu clasa td1
+            preg_match_all('/<td[^>]*class=["\']?td1["\']?[^>]*>(.*?)<\/td>/is', $row_html, $cells);
+
+            // Dacă rândul are mai puțin de 3 celule, sărim peste (nu e rând de date)
+            if (empty($cells[1]) || count($cells[1]) < 3) {
+                continue;
+            }
+
+            // Parcurgem fiecare celulă și detectăm tipul de date
+            foreach ($cells[1] as $cell) {
+                $text = trim(preg_replace('/\s+/', ' ', strip_tags($cell)));
+
+                if (empty($text) || strlen($text) < 2) continue;
+
+                // Detectare Status (Se împr., Pe raft, etc.)
+                if (empty($data['status']) && preg_match('/(Se împr\.|Pe raft|Pentru împrumut|Împrumutat|Doar pentru)/i', $text)) {
                     $data['status'] = $text;
                 }
-                
-                // 🔥 BARCODE - pattern mai permisiv
-                if (empty($data['barcode']) && 
-                    preg_match('/^([A-Z]{1,3})?\d{5,10}(-\d{1,2})?$/i', $text)) {
+                // Detectare Cotă (ex: SBC/00004, I-14156, etc.)
+                elseif (empty($data['cota']) && preg_match('/[A-Z]+.*?[\/\-]\d+/i', $text) && !preg_match('/^\d{4}\/\d{2}$/', $text) && strlen($text) < 50) {
+                    $data['cota'] = $text;
+                    $data['locatie'] = $text; // Salvăm și în locatie
+                }
+                // Detectare Barcode (ex: A123456, 12345-1, etc.)
+                elseif (empty($data['barcode']) && (preg_match('/^[A-Z]{0,3}\d{4,}$/i', $text) || preg_match('/^\d+-\d+$/i', $text))) {
                     $data['barcode'] = $text;
+                }
+                // Detectare Bibliotecă
+                elseif (empty($data['biblioteca']) && stripos($text, 'Biblioteca') !== false && stripos($text, 'Academiei') !== false) {
+                    $data['biblioteca'] = $text;
+                }
+                // Detectare Colecție (Cărți, sala, depozit, etc.)
+                elseif (empty($data['colectie']) && preg_match('/(Cărţi|Carte|sala|depozit|periodice)/i', $text) && strlen($text) > 5 && strlen($text) < 80) {
+                    $data['colectie'] = $text;
+                }
+                // Detectare Localizare2 (format YYYY/MM)
+                elseif (empty($data['sectiune']) && preg_match('/^\d{4}\/\d{2}$/', $text)) {
+                    $data['sectiune'] = $text;
+                }
+            }
+
+            // Dacă am găsit cotă SAU barcode, oprim căutarea
+            if (!empty($data['cota']) || !empty($data['barcode'])) {
+                $debug_info['found_via_method_2a'] = true;
+                $debug_info['method_2a_cota'] = $data['cota'] ?? 'N/A';
+                $debug_info['method_2a_barcode'] = $data['barcode'] ?? 'N/A';
+                break;
+            }
+        }
+
+        // ====================================================================
+        // METODA 2B: Extragere cota și barcode din tabelul de exemplare (DOM parsing)
+        // ====================================================================
+        // Această metodă extrage cota și barcode-ul direct din tabelul de
+        // exemplare, folosind DOM parsing pentru a găsi coloanele "COTĂ" și
+        // "Barcod". Funcționează pentru orice format, fără pattern-uri regex.
+        // Această metodă este un FALLBACK pentru cazurile în care Metoda 2A nu găsește date.
+
+        if (empty($data['cota']) && empty($data['barcode'])) {
+            $dom = new DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($item_html, 'HTML-ENTITIES', 'UTF-8'));
+        $xpath = new DOMXPath($dom);
+        
+        // Caută tabelul de exemplare
+        $tables = $xpath->query("//table[.//th[contains(., 'COTĂ')] or .//th[contains(., 'Barcod')]]");
+        
+        if ($tables->length > 0) {
+            $table = $tables->item(0);
+            $rows = $xpath->query(".//tr", $table);
+            
+            // Găsește header-ul pentru a identifica coloanele
+            $header_row = null;
+            $cota_col_index = -1;
+            $barcode_col_index = -1;
+            
+            foreach ($rows as $row) {
+                $th_cells = $xpath->query(".//th", $row);
+                if ($th_cells->length > 0) {
+                    $header_row = $row;
+                    $col_index = 0;
+                    foreach ($th_cells as $th) {
+                        $th_text = trim($th->textContent);
+                        if (stripos($th_text, 'COTĂ') !== false || stripos($th_text, 'Localizare') !== false) {
+                            $cota_col_index = $col_index;
+                        }
+                        if (stripos($th_text, 'Barcod') !== false) {
+                            $barcode_col_index = $col_index;
+                        }
+                        $col_index++;
+                    }
+                    break;
+                }
+            }
+            
+            // Extrage datele din primul rând de date (după header)
+            if ($header_row && ($cota_col_index >= 0 || $barcode_col_index >= 0)) {
+                foreach ($rows as $row) {
+                    if ($row === $header_row) continue;
+                    
+                    $td_cells = $xpath->query(".//td[@class='td1']", $row);
+                    if ($td_cells->length > 0) {
+                        // Extrage cota
+                        if ($cota_col_index >= 0 && $cota_col_index < $td_cells->length && empty($data['cota'])) {
+                            $cota_td = $td_cells->item($cota_col_index);
+                            $cota_val = trim($cota_td->textContent);
+                            if (!empty($cota_val) && $cota_val !== 'Pe raft' && strlen($cota_val) > 0) {
+                                $data['cota'] = $cota_val;
+                                $data['locatie'] = $cota_val;
+                            }
+                        }
+                        
+                        // Extrage barcode
+                        if ($barcode_col_index >= 0 && $barcode_col_index < $td_cells->length && empty($data['barcode'])) {
+                            $barcode_td = $td_cells->item($barcode_col_index);
+                            $barcode_val = trim($barcode_td->textContent);
+                            if (!empty($barcode_val) && strlen($barcode_val) > 0) {
+                                $data['barcode'] = $barcode_val;
+                            }
+                        }
+                        
+                        // Dacă am găsit ambele, oprim căutarea
+                        if (!empty($data['cota']) && !empty($data['barcode'])) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        } // Închide if (empty($data['cota']) && empty($data['barcode'])) pentru Metoda 2B
+
+        // Fallback: Caută direct în HTML folosind comentariile <!--Localizare--> și <!--Barcod-->
+        if (empty($data['cota']) || empty($data['barcode'])) {
+            if (preg_match_all('/<!--Localizare-->\s*<td[^>]*class=["\']?td1["\']?[^>]*>([^<]+)<\/td>/i', $item_html, $cota_matches)) {
+                foreach ($cota_matches[1] as $cota_match) {
+                    $cota_val = trim(strip_tags($cota_match));
+                    if (!empty($cota_val) && empty($data['cota'])) {
+                        $data['cota'] = $cota_val;
+                        $data['locatie'] = $cota_val;
+                        break;
+                    }
+                }
+            }
+            
+            if (preg_match_all('/<!--Barcod-->\s*<td[^>]*class=["\']?td1["\']?[^>]*>([^<]+)<\/td>/i', $item_html, $barcode_matches)) {
+                foreach ($barcode_matches[1] as $barcode_match) {
+                    $barcode_val = trim(strip_tags($barcode_match));
+                    if (!empty($barcode_val) && empty($data['barcode'])) {
+                        $data['barcode'] = $barcode_val;
+                        break;
+                    }
                 }
             }
         }
@@ -875,7 +833,9 @@ if (empty($full_detail_url) && empty($item_url)) {
             }
         }
         
-        // Verifică dacă titlul este un mesaj de eroare/sesiune expirată
+        // Verifică dacă titlul este un mesaj de eroare/sesiune expirată sau titlu generic
+        // IMPORTANT: Verificăm doar titluri GENERICE specifice care indică că nu s-a găsit nicio carte
+        // NU verificăm "Căutare de bază" pentru că apare și în titlul paginii de căutare, nu doar când nu există carte
         $titlu = trim($data['titlu'] ?? '');
         $mesaje_eroare = [
             'Sfârşitul sesiunii',
@@ -883,7 +843,9 @@ if (empty($full_detail_url) && empty($item_url)) {
             'End of session',
             'Session ended',
             'Sesiune expirată',
-            'Session expired'
+            'Session expired',
+            'Căutări anterioare',  // Titlu generic când nu se găsește nicio carte
+            'Previous searches'    // Titlu generic când nu se găsește nicio carte
         ];
         
         foreach ($mesaje_eroare as $mesaj_eroare) {
@@ -898,7 +860,9 @@ if (empty($full_detail_url) && empty($item_url)) {
         }
         
         // Verifică date minime
-        if (empty($data['titlu']) || strlen($titlu) < 3) {
+        // IMPORTANT: Dacă titlul este gol sau prea scurt, cartea nu există
+        $titlu_check = trim($data['titlu'] ?? '');
+        if (empty($titlu_check) || strlen($titlu_check) < 3) {
             return [
                 'success' => false,
                 'mesaj' => "Nu există această carte în baza de date Aleph",

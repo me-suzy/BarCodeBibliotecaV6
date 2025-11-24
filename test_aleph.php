@@ -5,7 +5,7 @@ echo "<h3>Test conectivitate Aleph</h3>";
 echo "<p><strong>1. allow_url_fopen:</strong> " . (ini_get('allow_url_fopen') ? '✅ Activat' : '❌ Dezactivat') . "</p>";
 
 // Test 2: Încearcă să acceseze Aleph
-$aleph_url = "http://83.146.133.42:8991/F";
+$aleph_url = "http://65.176.121.45:8991/F";
 echo "<p><strong>2. Test conectare Aleph:</strong></p>";
 
 $context = stream_context_create([
@@ -48,6 +48,6 @@ if (function_exists('curl_init')) {
 // Test 5: Testează direct URL-ul în browser
 echo "<hr>";
 echo "<p><strong>5. Test manual în browser:</strong></p>";
-echo "<p><a href='http://83.146.133.42:8991/F' target='_blank'>Deschide Aleph în browser →</a></p>";
+echo "<p><a href='http://65.176.121.45:8991/F' target='_blank'>Deschide Aleph în browser →</a></p>";
 echo "<p><small>Dacă se deschide în browser dar nu funcționează în PHP, problema e la configurația PHP.</small></p>";
 ?>
